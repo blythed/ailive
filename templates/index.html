@@ -1,0 +1,224 @@
+<html>
+  <header>
+    <script>
+      function changeColor(color) {
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/change-color/' + color)
+      }
+
+      function modify(key) {
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/modify/' + key)
+      }
+
+      function reset(key) {
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/reset/' + key)
+      }
+
+      function pause(key) {
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/pause/' + key)
+      }
+
+      function press(key) {
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/press/' + key)
+      }
+
+      function setSensitivity() {
+        e = document.getElementById('myRange')
+        var value = (e.value / 10)
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/set-sensitivity/' + value)
+        e = document.getElementById('sDisplay')
+        e.innerHTML = 'Sensitivity = ' + value
+      }
+
+      function setTransitionLength() {
+        e = document.getElementById('stepsRange')
+        var value = e.value
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/set-transition-len/' + value)
+        e = document.getElementById('steps-control')
+        e.innerHTML = 'Transition Length = ' + value
+      }
+
+      function randomWalk() {
+        e = document.getElementById('walkRange')
+        var value = (e.value / 100)
+        fetch('http://192.168.178.63:5000/set-walk-speed/' + value)
+        e = document.getElementById('wDisplay')
+        e.innerHTML = 'Walk speed = ' + value
+      }
+
+      function changeModel() {
+        e = document.getElementById('select-model')
+        var value = (e.value)
+        console.log(value)
+        fetch('http://192.168.178.63:5000/change-model/' + value)
+
+      }
+    </script>
+  </header>
+  <body>
+    <div style='display: flex;'>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="modify('grey')" >
+          More Black/White
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="modify('white')" >
+          More Opaque
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="modify('black')" >
+          Dim
+      </button>
+    </div>
+    <div style='display: flex;'>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="reset('grey')" >
+          Less Black/White
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="reset('white')" >
+          Less Opaque
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="reset('black')" >
+          Lighten
+      </button>
+    </div>
+    <div style='display: flex;'>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="pause('grey')" >
+          Freeze Black/White
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="pause('white')" >
+          Freeze Opacity
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="pause('black')" >
+          Keep dim/lightness
+      </button>
+    </div>
+    <div style='display: flex;'>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="press('u')" >
+          U
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="press('i')" >
+          I
+      </button>
+      <button
+        style='width: 33%; height: 25%; font-size: 30px;'
+        onclick="press('r')" >
+          Permute
+          Key
+      </button>
+    </div>
+    <div>
+      <div
+        id='steps-control'
+        style='text-align: center; width: 100%; padding-top: 20px; font-family: arial; font-size: 30px;' >
+            Transition Length = 100
+      </div>
+      <input
+        onChange='setTransitionLength()'
+        style='width: 100%;'
+        type="range"
+        min="1" max="100"
+        value="100"
+        steps="1"
+        class="slider"
+        id="stepsRange" >
+    </div>
+    <div>
+      <div
+        id='sDisplay'
+        style='text-align: center; width: 100%; padding-top: 20px; font-family: arial; font-size: 30px;' >
+            Sensitivity = 1
+      </div>
+      <input
+        onChange='setSensitivity()'
+        style='width: 100%;'
+        type="range"
+        min="0" max="30"
+        value="10"
+        steps="1"
+        class="slider"
+        id="myRange" >
+    </div>
+    <div>
+      <div
+        id='wDisplay'
+        style='text-align: center; width: 100%; padding-top: 20px; font-family: arial; font-size: 30px;' >
+            Walk speed = 0
+      </div>
+      <input
+        onChange='randomWalk()'
+        style='width: 100%;'
+        type="range"
+        min="0" max="100"
+        value="0"
+        steps="1"
+        class="slider"
+        id="walkRange" >
+    </div>
+    <div style='display: flex; height: 140px; width: 25%;'>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: red;' >
+      </div>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: blue;' >
+      </div>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: green;' >
+      </div>
+    </div>
+    <div style='display: flex; height: 140px; width: 25%;'>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: purple;' >
+      </div>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: yellow;' >
+      </div>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: orange;' >
+      </div>
+    </div>
+    <div style='display: flex; height: 140px; width: 25%;'>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: pink;' >
+      </div>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: turquoise;' >
+      </div>
+      <div
+        style='width: 33%; height: 100%; font-size: 30px; background-color: coral;' >
+      </div>
+    </div>
+    <div>
+      <div>SELECT MODEL</div>
+      <select onchange="changeModel()" id="select-model">
+        {% for model in model_names %}
+          <option value="{{model}}">{{model}}</option>
+        {% endfor %}
+      </select>
+    </div>
+  </body>
+</html>
