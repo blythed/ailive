@@ -25,7 +25,6 @@ with open('config.yaml') as f:
     cf = yaml.load(f, Loader=yaml.FullLoader)
 
 audio_cf = Struct(**cf['audio'], indent=2)
-sensitivity_cf = Struct(**cf['sensitivity'], indent=2)
 flask_cf = Struct(**cf['flask'], indent=2)
 
 if isinstance(flask_cf.path, str):
@@ -39,7 +38,4 @@ for x in flask_cf.path:
 
 cf = Struct(model=flask_cf.model_cfs[flask_cf.path[0]],
             audio=audio_cf,
-            sensitivity=sensitivity_cf,
             flask=flask_cf)
-
-print(cf)

@@ -1,4 +1,5 @@
 import numpy
+from scipy.ndimage import gaussian_filter
 
 
 class Modifier:
@@ -73,3 +74,11 @@ class Black(Component):
     def _call_with_proportion(self, i, alpha):
         black = numpy.zeros(i.shape)
         return alpha * black + (1 - alpha) * i
+
+
+class Filter(Component):
+    def _call_with_proportion(self, i, alpha):
+        if alpha:
+            for j in range(3):
+                i[:, :, j] = gaussian_filter(i[:, :, j], sigma=4 * alpha)
+        return i

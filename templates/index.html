@@ -26,6 +26,15 @@
         fetch('http://192.168.178.63:5000/press/' + key)
       }
 
+      function setNormalizer() {
+        e = document.getElementById('myNorm')
+        var value = (e.value / 100)
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/set-normalizer/' + value)
+        e = document.getElementById('normDisplay')
+        e.innerHTML = 'Normalizer = ' + value
+      }
+
       function setSensitivity() {
         e = document.getElementById('myRange')
         var value = (e.value / 10)
@@ -33,6 +42,15 @@
         fetch('http://192.168.178.63:5000/set-sensitivity/' + value)
         e = document.getElementById('sDisplay')
         e.innerHTML = 'Sensitivity = ' + value
+      }
+
+      function filterImage() {
+        e = document.getElementById('fRange')
+        var value = (e.value / 10)
+        console.log('sending request')
+        fetch('http://192.168.178.63:5000/filter-image/' + value)
+        e = document.getElementById('fDisplay')
+        e.innerHTML = 'Filter = ' + value
       }
 
       function setTransitionLength() {
@@ -64,56 +82,71 @@
   <body>
     <div style='display: flex;'>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="modify('grey')" >
           More Black/White
       </button>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="modify('white')" >
           More Opaque
       </button>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="modify('black')" >
           Dim
+      </button>
+      <button
+        style='width: 25%; height: 25%; font-size: 30px;'
+        onclick="modify('filter')" >
+          Blur
       </button>
     </div>
     <div style='display: flex;'>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="reset('grey')" >
           Less Black/White
       </button>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="reset('white')" >
           Less Opaque
       </button>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="reset('black')" >
           Lighten
+      </button>
+      <button
+        style='width: 25%; height: 25%; font-size: 30px;'
+        onclick="reset('filter')" >
+          Sharpen
       </button>
     </div>
     <div style='display: flex;'>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="pause('grey')" >
           Freeze Black/White
       </button>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="pause('white')" >
           Freeze Opacity
       </button>
       <button
-        style='width: 33%; height: 25%; font-size: 30px;'
+        style='width: 25%; height: 25%; font-size: 30px;'
         onclick="pause('black')" >
           Keep dim/lightness
       </button>
+      <button
+        style='width: 25%; height: 25%; font-size: 30px;'
+        onclick="pause('filter')" >
+          Keep blurriness/ sharpness
+      </button>
     </div>
-    <div style='display: flex;'>
+<!--    <div style='display: flex;'>
       <button
         style='width: 33%; height: 25%; font-size: 30px;'
         onclick="press('u')" >
@@ -130,7 +163,7 @@
           Permute
           Key
       </button>
-    </div>
+    </div> -->
     <div>
       <div
         id='steps-control'
@@ -165,6 +198,22 @@
     </div>
     <div>
       <div
+        id='normDisplay'
+        style='text-align: center; width: 100%; padding-top: 20px; font-family: arial; font-size: 30px;' >
+            Normalizer = 0
+      </div>
+      <input
+        onChange='setNormalizer()'
+        style='width: 100%;'
+        type="range"
+        min="0" max="100"
+        value="0"
+        steps="1"
+        class="slider"
+        id="myNorm" >
+    </div>
+    <div>
+      <div
         id='wDisplay'
         style='text-align: center; width: 100%; padding-top: 20px; font-family: arial; font-size: 30px;' >
             Walk speed = 0
@@ -179,6 +228,7 @@
         class="slider"
         id="walkRange" >
     </div>
+<!--
     <div style='display: flex; height: 140px; width: 25%;'>
       <div
         style='width: 33%; height: 100%; font-size: 30px; background-color: red;' >
@@ -211,7 +261,7 @@
       <div
         style='width: 33%; height: 100%; font-size: 30px; background-color: coral;' >
       </div>
-    </div>
+    </div> -->
     <div>
       <div>SELECT MODEL</div>
       <select onchange="changeModel()" id="select-model">

@@ -22,7 +22,6 @@ from ailive import DEVICE
 class Animator:
     def __init__(self,
                  model_cf,
-                 sensitivity_cf,
                  audio_cf):
 
         root = tk.Tk()
@@ -31,7 +30,8 @@ class Animator:
         root.withdraw()
         self.aspect_ratio = self.screen_height / self.screen_width
 
-        self.sensitivity_cf = sensitivity_cf
+        self._sensitivity = 1
+        self._normalizer = 0
         self.audio_cf = audio_cf
 
         self.model_cf = model_cf
@@ -54,18 +54,21 @@ class Animator:
         self.audioA = AA()
         self.q = queue.Queue()
 
-        device_info = sd.query_devices(self.audio_cf.device, 'input')
-        self.samplerate = device_info['default_samplerate']
-        length = int(self.audio_cf.window * self.samplerate /
-                     (1000 * self.audio_cf.downsample))
-        self.plotdata = np.zeros((length, len(audio_cf.channels)))
+        try:
+            device_info = sd.query_devices(self.audio_cf.device, 'input')
+            self.samplerate = device_info['default_samplerate']
+            length = int(self.audio_cf.window * self.samplerate /
+                         (1000 * self.audio_cf.downsample))
+            self.plotdata = np.zeros((length, len(audio_cf.channels)))
 
-        self.stream = sd.InputStream(
-            device=self.audio_cf.device,
-            channels=max(self.audio_cf.channels),
-            samplerate=self.samplerate,
-            callback=self._audio_callback,
-        )
+            self.stream = sd.InputStream(
+                device=self.audio_cf.device,
+                channels=max(self.audio_cf.channels),
+                samplerate=self.samplerate,
+                callback=self._audio_callback,
+            )
+        except:
+            self.samplerate = 44100
 
         if self.audio_cf.bPCA:
             self._init_pca()
@@ -83,6 +86,7 @@ class Animator:
         value.Hpx = round(value.Wpx * self.aspect_ratio)
         self._model_cf = value
         model = self._init_model()
+        model.eval()
         self.model = self._load_model(self.model_cf.path, model)
 
     def _init_pca(self):
@@ -138,10 +142,8 @@ class Animator:
         return  torch.arange(self.L).to(DEVICE).long()
 
     def infer_step(self, x, noise):
-        if self.sensitivity_cf.normalize:
-            x = self.sensitivity_cf.normalize * x / (x.sum() + 0.0001)  + (1 - self.sensitivity_cf.normalize) * x
-        else:
-            x = self.sensitivity_cf.level * x
+        x = self.normalizer * x / (x.sum() + 0.0001)  + (1 - self.normalizer) * x
+        x = self.sensitivity * x
 
         if self.audio_cf.bPCA:
             x = self._update_pca(x)
@@ -184,13 +186,22 @@ class Animator:
         self.q.put(indata[::self.audio_cf.downsample, self.mapping])
 
     @property
+    def normalizer(self):
+        return self._normalizer
+
+    @normalizer.setter
+    def normalizer(self, value):
+        self._normalizer = value
+        print('normalizer is ' + str(value))
+
+    @property
     def sensitivity(self):
-        return self.sensitivity_cf.level
+        return self._sensitivity
 
     @sensitivity.setter
     def sensitivity(self, value):
+        self._sensitivity = value
         print('sensitivity is ' + str(value))
-        self.sensitivity_cf.level = value
 
     def press(self, key, **kwargs):
 
@@ -232,16 +243,14 @@ class Animator:
         self.press(event.key)
 
     def get_noise(self):
+        alpha = (self.n_steps % self.walk_steps) / self.walk_steps
+        noise = alpha * self.new_noise + (1 - alpha) * self.noise
         if self.random_walk:
-            alpha = (self.n_steps % self.walk_steps) / self.walk_steps
-            noise = alpha * self.new_noise + (1 - alpha) * self.noise
             self.n_steps += 1
             if (self.n_steps % self.walk_steps < 1):
                 self.noise = self.new_noise
                 self.new_noise = self._init_noise()
-            return noise
-        else:
-            return self.noise
+        return noise
 
     def create_sample(self, x):
         magnitude = self.audioA.sp3(x)

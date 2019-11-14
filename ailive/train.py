@@ -7,22 +7,27 @@ import os
 import random
 import sys
 import time
-import torch
+import yaml
 
+import torch
 import torch.nn as nn
 import torch.nn.parallel
 import torch.backends.cudnn as cudnn
 import torch.optim as optim
 import torch.utils.data
+import torchvision.transforms as transforms
+import torchvision.utils as vutils
 
 from ailive import DEVICE
 from ailive.data import TextureDataset, LiveDataset
 from ailive.models import Generator, Discriminator, setWave, setNoise
 from ailive.config import Struct
+from ailive.generate import generate
+from ailive.config import cf
 
-import torchvision.transforms as transforms
-import torchvision.utils as vutils
-import yaml
+from shu import shu
+from shu.core.db import db
+
 
 matplotlib.use('Agg')
 cudnn.benchmark = True
@@ -156,6 +161,7 @@ class Trainer:
             self.gen_cf.ngf,
             self.gen_cf.nDep,
             self.gen_cf.nz,
+            self.gen_cf.nGL,
             Ctype=self.gen_cf.Ctype,
             nPeriodic=self.gen_cf.nperiodic,
             nc=self.gen_cf.nc,
@@ -337,11 +343,30 @@ class Trainer:
         self.epoch += 1
 
     def _create_video(self):
-        # create video here after training is finished and log
-        # result to glances directory
-        pass
+        generate(self.gen_cf, cf.audio, self.shu_name)
+        if self.gen_cf.nperiodic > 0:
+            n = 4
+        else:
+            n = 2
+        to_print = json.dumps({'example': '/static/' + self.glance_dir + 'example.mp4'})
+        print(f'GLANCE {n} iteration: {self.it}; data: {to_print};')
+
+    def _push_data(self):
+        version = str(db.instances.find_one({'name': 'ailive'})['version'])
+        print('pushing training data to ailive server')
+        shu.files.sync(version)
+        shu.files.checkpoints(version, exclude='"*"', include='"*/log"')
+        shu.files.data(version, exclude='"data/audio/*"')
+
+        ims = os.listdir('data/images/' + self.shu_name)
+        ims = ['/static/images/' + x for x in ims]
+
+        r = {'name': self.shu_name, 'examples': ims, 'info': {}, 'project': 'ailive'}
+        db.datasets.replace_one({'name': self.shu_name}, r, upsert=True)
+
 
     def train(self):
         for _ in range(self.train_cf.n_epochs):
             self._do_epoch()
         self._create_video()
+        self._push_data()

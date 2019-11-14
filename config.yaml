@@ -2,7 +2,7 @@ sensitivity:
   # multiplier
   level: 1.0
   # whether to normalize
-  normalize: true
+  normalize: 0.5
 
 audio:
   # something technical (leave alone)
@@ -21,6 +21,6 @@ audio:
   pca_window: 2000
 flask:
   # black padding as a proportion of screen size
-  padding: 0.02
+  padding: 0
   # path of model folder to load
-  path: ['fire', 'clouds_pca', 'cosmos_pca', 'abstract_pca', 'richter_pca', 'water', 'pollock', 'droplets', 'honeycomb']
+  path: ['fire', 'clouds_pca', 'cosmos_pca', 'abstract_pca', 'richter_pca', 'water', 'pollock', 'droplets', 'electric', 'matrix', 'lightning']

@@ -13,12 +13,13 @@ from ailive.modifiers import *
 app = Flask(__name__)
 CORS(app)
 
-animator = Animator(cf.model, cf.sensitivity, cf.audio)
+animator = Animator(cf.model, cf.audio)
 
 modifiers = {
     'white': White(100),
     'grey': Greyscale(100),
     'black': Black(100),
+    'filter': Filter(100),
 }
 modifiers['black'].it = 100
 modifiers['black'].reverse = True
@@ -48,6 +49,11 @@ def gen():
 
 
 @app.route('/')
+def home():
+    return render_template('home.html')
+
+
+@app.route('/video_feed')
 def video_feed():
     return Response(gen(),
                     mimetype='multipart/x-mixed-replace; boundary=frame')
@@ -88,6 +94,12 @@ def press(key):
 @app.route('/set-sensitivity/<string:level>')
 def set_sensitivity(level):
     animator.sensitivity = float(level)
+    return 'ok'
+
+
+@app.route('/set-normalizer/<string:level>')
+def set_normalizer(level):
+    animator.normalizer = float(level)
     return 'ok'
 
 
