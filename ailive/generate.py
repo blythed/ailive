@@ -44,7 +44,6 @@ def generate(cf_model, cf_audio, checkpoint=None, a=None):
     plt.axis('off')
     plt.box(False)
 
-
     ims = []
     for i in tqdm.tqdm(range(len(images))):
         ims.append((plt.imshow(images[i]),))

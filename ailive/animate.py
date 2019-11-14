@@ -86,7 +86,7 @@ class Animator:
         value.Hpx = round(value.Wpx * self.aspect_ratio)
         self._model_cf = value
         model = self._init_model()
-        model.eval()
+        model.eval  ()
         self.model = self._load_model(self.model_cf.path, model)
 
     def _init_pca(self):
