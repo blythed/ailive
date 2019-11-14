@@ -33,8 +33,8 @@ def generate(cf_model, cf_audio, checkpoint=None, a=None):
     images = []
     for sample in tqdm.tqdm(audio_samples):
         image = a.create_sample(sample)
-        images.append(image)
         image = (image * 255).astype(numpy.uint8)
+        images.append(image)
 
     Writer = animation.writers['ffmpeg']
     writer = Writer(fps=20, metadata=dict(artist='Me'), bitrate=1800)
