@@ -17,7 +17,7 @@ Trainer(
     sys.argv[1],
     *get_configs(
         path='checkpoints/' + sys.argv[1] + '/config.yaml',
-        dataroot='data/images/'  + sys.argv[2] + '/',
+        dataroot='data/images/' + sys.argv[2] + '/',
         name=sys.argv[1],
     )
 ).train()

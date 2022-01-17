@@ -1,14 +1,21 @@
 from flask import Flask, render_template, Response
 from flask_cors import CORS
 import io
-import numpy
 from PIL import Image
-import time
+import sys
 
 from ailive.config import cf
 from ailive.animate import Animator
 from ailive.modifiers import *
 
+if len(sys.argv) == 1 or sys.argv[1] == 'remote':
+    HOST = '192.168.1.102'
+elif sys.argv[1] == 'local':
+    HOST = 'localhost'
+else:
+    HOST = sys.argv[1]
+
+print(HOST)
 
 app = Flask(__name__)
 CORS(app)
@@ -24,14 +31,31 @@ modifiers = {
 modifiers['black'].it = 100
 modifiers['black'].reverse = True
 
+is_changing = False
+latest_model = None
+was_dark = False
+
 
 def gen():
+    global is_changing
+    global latest_model
     for i in animator:
         i = i * 255
+
         shape = i.shape
+
+        if is_changing and modifiers['black'].done:
+            animator.model_cf = cf.flask.model_cfs[latest_model]
+            is_changing = False
+            latest_model = None
+            if not was_dark:
+                modifiers['black'].reverse = True
+                modifiers['filter'].reverse = True
 
         for k in modifiers:
             i = modifiers[k](i)
+
+        i = (i > 0).astype(numpy.uint8) * i
 
         multiplier = round(
             (1 - cf.flask.padding) * animator.screen_width / i.shape[1]
@@ -117,14 +141,39 @@ def set_walk_speed(speed):
     return 'ok'
 
 
+@app.route('/set-pca-length/<string:length>')
+def set_pca_length(length):
+    length = int(length)
+    print('pca length is: ' + str(length))
+    animator.audio_cf.pca_window = length
+    print(animator.audio_cf.pca_window)
+    return 'ok'
+
+
+@app.route('/smooth/<string:window>')
+def smooth(window):
+    window = int(window)
+    print(f'smoothing window is {window}')
+    animator.smoothing_window = window
+    return 'ok'
+
+
 @app.route('/controls')
 def controls():
-    return render_template('index.html', model_names=list(cf.flask.model_cfs.keys()))
+    return render_template('index.html', model_names=list(cf.flask.model_cfs.keys()), host=HOST)
 
 
 @app.route('/change-model/<string:name>')
 def change_model(name):
-    animator.model_cf = cf.flask.model_cfs[name]
+    global was_dark
+    if modifiers['black'].it == 100:
+        was_dark = True
+    modifiers['black'].reverse = False
+    modifiers['filter'].reverse = False
+    global is_changing
+    global latest_model
+    latest_model = name
+    is_changing = True
     return 'ok'
 
 

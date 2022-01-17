@@ -1,6 +1,3 @@
-from torch.utils.data import Dataset
-import os
-from PIL import Image
 import numpy as np
 import torch
 import torch.nn as nn
@@ -9,16 +6,18 @@ norma = nn.BatchNorm2d
 from ailive import DEVICE
 
 
-def initWave(nPeriodic, nGL, Kperiodic=50):
+def init_wave(nPeriodic, nGL, Kperiodic=50):
             buf = []  # [0,0.5,0.5,0,1,0,0,1]
             for  i in range(nPeriodic // 4):
                 v = 0.5 + i / float(nPeriodic / 2)  # #so 0.5 to 1
                 buf += [0, v, v, 0]
-                buf += [0, -v, -v, 0]  # #so from other quadrants as well..
+                buf += [0, -v, -v, 0]  # so from other quadrants as well..
             awave = np.array(buf, dtype=np.float32) * np.pi
             print ("awave", awave)
-            awave += np.random.randn(awave.shape[0]) * 0.1  # # some noise
-            awave = torch.FloatTensor(awave).unsqueeze(-1).unsqueeze(-1).unsqueeze(0)  # #for 2 spatial dims at the end and then for batch dim in front
+            # some noise
+            awave += np.random.randn(awave.shape[0]) * 0.1
+            # for 2 spatial dims at the end and then for batch dim in front
+            awave = torch.FloatTensor(awave).unsqueeze(-1).unsqueeze(-1).unsqueeze(0)
             if Kperiodic == 0:
                 return nn.Parameter(awave)
             else:
@@ -28,7 +27,7 @@ def initWave(nPeriodic, nGL, Kperiodic=50):
                 return nn.Parameter(awave) , nn.Sequential(*[lin1, rel, lin2])
 
 
-def setWave(noise, nPeriodic, net, nGL, zeroOff=False, offset=None, Kperiodic=50):
+def set_wave(noise, nPeriodic, net, nGL, offset=None, Kperiodic=50):
     if offset is None:
         offset = (noise[:, :nPeriodic, :1, :1] * 1.0).uniform_(-1, 1) * 6.28
 
@@ -44,12 +43,12 @@ def setWave(noise, nPeriodic, net, nGL, zeroOff=False, offset=None, Kperiodic=50
     return torch.cat([noise[:, :-2 * nPeriodic], wave], 1)
 
 
-def setNoise(noise,
-             audio=None,
-             nGL=60,
-             nPeriodic=0,
-             nz=100,
-             supressR=False):
+def set_noise(noise,
+              audio=None,
+              nGL=60,
+              nPeriodic=0,
+              nz=100,
+              supressR=False):
     """
     :param noise:
     :param audio:
@@ -85,7 +84,7 @@ def setNoise(noise,
 
 
 class Discriminator(nn.Module):
-    def __init__(self, ndf, nDep, nc=3, bSigm=True, Ctype=1, bOut1=True):
+    def __init__(self, ndf, nDep, nc=3, Ctype=1, bOut1=True):
         super().__init__()
         layers = []
         of = nc
@@ -114,39 +113,6 @@ class Discriminator(nn.Module):
         return output[:, :, 1:-1, 1:-1]
 
 
-class Reconstructor(nn.Module):
-    def __init__(self, ndf, nDep, nGL, Ctype=1, nc=3):
-        super(_netR, self).__init__()
-        layers = []
-        of = nc
-        for i in range(nDep):
-            if i == nDep - 1 and False:
-                nf = nGL
-            else:
-                nf = ndf * 2 ** i
-            if Ctype == 1:
-                layers += [nn.Conv2d(of, nf, 5, 2, 2)]
-            else:
-                layers += [nn.Conv2d(of, nf, 4, 2, 1)]
-
-            print("layersD" + str(of) + ";" + str(nf))
-            if i != 0 and i != nDep - 1:
-                layers += [nn.BatchNorm2d(nf)]
-
-            if i < nDep - 1:
-                layers += [nn.LeakyReLU(0.2, inplace=True)]
-            else:
-                pass
-            of = nf
-        self.main = nn.Sequential(*layers)
-        self.final = nn.Conv2d(of, nGL, 1)
-
-    def forward(self, input):
-        output = self.main(input)
-        output = output.mean(3).mean(2).unsqueeze(2).unsqueeze(3)
-        return self.final(output)
-
-
 class Generator(nn.Module):
     def __init__(self, ngf, nDep, nz, nGL, Ctype=1, nPeriodic=0, nc=3,
                  Kperiodic=50):
@@ -164,9 +130,9 @@ class Generator(nn.Module):
         self.nPeriodic = nPeriodic
         if self.nPeriodic:
             if Kperiodic == 0:
-                self.waver = initWave(nPeriodic, nGL, Kperiodic=Kperiodic)
+                self.waver = init_wave(nPeriodic, nGL, Kperiodic=Kperiodic)
             else:
-                self.waver, self.wavenet = initWave(nPeriodic, nGL, Kperiodic=Kperiodic)
+                self.waver, self.wavenet = init_wave(nPeriodic, nGL, Kperiodic=Kperiodic)
 
         self.nGL = nGL
 
@@ -192,6 +158,6 @@ class Generator(nn.Module):
 
     def forward(self, input, offset=None):
         if self.nPeriodic:
-            input = setWave(input, self.nPeriodic, self, self.nGL, offset=offset)
+            input = set_wave(input, self.nPeriodic, self, self.nGL, offset=offset)
         output = self.main(input)
         return output

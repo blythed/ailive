@@ -62,17 +62,17 @@ def update_plot(frame):
     therefore the queue tends to contain multiple blocks of audio data.
 
     """
-    global plotdata
+    global plot_data
     while True:
         try:
             data = q.get_nowait()
         except queue.Empty:
             break
         shift = len(data)
-        plotdata = np.roll(plotdata, -shift, axis=0)
-        plotdata[-shift:, :] = data
+        plot_data = np.roll(plot_data, -shift, axis=0)
+        plot_data[-shift:, :] = data
     for column, line in enumerate(lines):
-        line.set_ydata(plotdata[:, column])
+        line.set_ydata(plot_data[:, column])
     return lines
 
 
@@ -90,14 +90,14 @@ try:
         args.samplerate = device_info['default_samplerate']
 
     length = int(args.window * args.samplerate / (1000 * args.downsample))
-    plotdata = np.zeros((length, len(args.channels)))
+    plot_data = np.zeros((length, len(args.channels)))
 
     fig, ax = plt.subplots()
-    lines = ax.plot(plotdata)
+    lines = ax.plot(plot_data)
     if len(args.channels) > 1:
         ax.legend(['channel {}'.format(c) for c in args.channels],
                   loc='lower left', ncol=len(args.channels))
-    ax.axis((0, len(plotdata), -1, 1))
+    ax.axis((0, len(plot_data), -1, 1))
     ax.set_yticks([0])
     ax.yaxis.grid(True)
     ax.tick_params(bottom='off', top='off', labelbottom='off',

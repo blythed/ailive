@@ -13,14 +13,40 @@ audio:
   downsample: 1
   # visible time slot
   window: 200
-  # interval for refreshing plot (not needed)
-  interval: 30
   # use pca in inference step
   bPCA: true
   # length of PCA update window
   pca_window: 2000
+  # pca smoothing
+  n_smooth: 0
 flask:
   # black padding as a proportion of screen size
   padding: 0
   # path of model folder to load
-  path: ['fire', 'clouds_pca', 'cosmos_pca', 'abstract_pca', 'richter_pca', 'water', 'pollock', 'droplets', 'electric', 'matrix', 'lightning']
+  path:
+  - electric
+  - northernlights
+  - matrix
+  - fire
+  - clouds_pca
+  - cosmos_pca
+  - abstract_pca
+  - richter_pca
+  - droplets
+  - lightning
+  - violetagain
+  - vertical
+  - cool
+  - coloredfire
+  - sparks
+  - neurons
+  - sunrise
+  - calm
+  - amazing
+  - naked
+  - vangogh
+  - pollock
+  - animals_pca
+  - crowd_pca
+  - czerpinski
+  - czer-single

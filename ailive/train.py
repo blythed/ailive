@@ -1,11 +1,6 @@
-import argparse
 import json
-import numpy as np
-import matplotlib
-import matplotlib.pyplot as plt
 import os
 import random
-import sys
 import time
 import yaml
 
@@ -20,66 +15,12 @@ import torchvision.utils as vutils
 
 from ailive import DEVICE
 from ailive.data import TextureDataset, LiveDataset
-from ailive.models import Generator, Discriminator, setWave, setNoise
+from ailive.models import Generator, Discriminator, set_wave, set_noise
 from ailive.config import Struct
 from ailive.generate import generate
 from ailive.config import cf
 
-from shu import shu
-from shu.core.db import db
-
-
-matplotlib.use('Agg')
 cudnn.benchmark = True
-
-
-class Logger:
-    """
-    Class to log weights during training.
-    :param model: model whose weights should be logged
-    :param save_: path to checkpoint directory
-    """
-    def __init__(self,
-                 model,
-                 save_):
-
-        self.model = model
-        self.save_ = save_
-        self.variables = [x for x in self.model.state_dict().keys()]
-
-    def init(self):
-        """
-        Initialize logger by setting up weight dictionaries
-        """
-        self.save_dict = dict(zip(self.variables,
-                                  [[] for _ in self.variables]))
-        self.index_dict = {}
-
-        for var_ in self.variables:
-            tensor_ = self.model.state_dict()[var_].view(-1)
-            len_ = len(tensor_)
-            ix = [random.choice(range(len_)) for _ in range(5)]
-            self.index_dict[var_] = ix
-
-    def dump(self):
-        """
-        Print logger to .json file with path in self.save_
-        """
-        with open(self.save_ + "/weights.json", "w") as f:
-            json.dump(self.save_dict, f)
-
-    def log(self):
-        """
-        Log weights into weight dictionaries at some point in training.
-        """
-        for var_ in self.variables:
-            tensor_ = self.model.state_dict()[var_].view(-1)
-            to_append = [float(tensor_[choice])
-                         for choice in self.index_dict[var_]]
-            self.save_dict[var_].append(to_append)
-            if len(self.save_dict[var_]) > 1000:
-                self.save_dict[var_] = \
-                    self.save_dict[var_][-1000:]
 
 
 def weights_init(m):
@@ -130,15 +71,13 @@ class Trainer:
         self.optimizerD, self.optimizerG = self._get_optimizers()
         self.dataloader, self.dataset, self.cdataset = self._get_data()
         self.criterion = nn.BCELoss()
-        self.logger = Logger(self.netG, 'checkpoints/' + self.shu_name)
-        self.logger.init()
 
         nz_other = train_cf.imageSize // 2 ** gen_cf.nDep
         self.noise = torch.FloatTensor(train_cf.batchSize,
                                        gen_cf.nz,
                                        nz_other,
                                        nz_other).to(DEVICE)
-        self.noise = setNoise(self.noise, nGL=self.gen_cf.nGL)
+        self.noise = set_noise(self.noise, nGL=self.gen_cf.nGL)
 
         self.label = torch.FloatTensor(train_cf.batchSize).to(DEVICE)
         self.REAL_LABEL = 1
@@ -169,12 +108,7 @@ class Trainer:
         )
         netD.to(DEVICE)
         netG.to(DEVICE)
-        if self.recon:
-            netR = Reconstructor(gen_cf.ndf, gen_cf.nDep, gen_cf.nGL)
-            netR.to(DEVICE)
-            return netD, netG, netR
-        else:
-            return netD, netG
+        return netD, netG
 
     def _init_weights(self):
         self.netD.apply(weights_init)
@@ -183,7 +117,7 @@ class Trainer:
             self.netR.apply(weights_init)
 
     def _load_weights(self):
-        self.netG.load_state_dict(torch.load(train_cf.load))
+        self.netG.load_state_dict(torch.load(self.train_cf.load))
 
     def _get_optimizers(self):
         optimizerD = optim.Adam(
@@ -237,7 +171,7 @@ class Trainer:
     def _take_generator_step(self):
         self.optimizerG.zero_grad()
         self.content = self.cdataset.next().to(DEVICE)
-        self.noise = setNoise(self.noise, audio=self.content, nGL=self.gen_cf.nGL)
+        self.noise = set_noise(self.noise, audio=self.content, nGL=self.gen_cf.nGL)
         self.fake = self.netG(self.noise)
         output = self.netD(self.fake)
         if self.recon:
@@ -249,7 +183,6 @@ class Trainer:
         errG = self.criterion(output, output.detach() * 0 + self.REAL_LABEL) + \
                self.train_cf.fRec * errR
         errG.backward()
-        D_G_z2 = output.mean().item()
         self.optimizerG.step()
 
     def _make_glances(self):
@@ -271,7 +204,7 @@ class Trainer:
         )
 
         n2 = self.noise[:4].repeat(1, 1, 3, 3)
-        n2 = setNoise(n2, audio=self.content[:4], nGL=self.gen_cf.nGL)
+        n2 = set_noise(n2, audio=self.content[:4], nGL=self.gen_cf.nGL)
         self.netG.eval()
         with torch.no_grad():
             fake2 = self.netG(n2)
@@ -288,16 +221,12 @@ class Trainer:
         print(f'GLANCE 1 iteration: {self.it}; data: {json.dumps(glance)};')
 
         if self.gen_cf.nperiodic > 0:
-            n2 = setWave(n2, self.gen_cf.nperiodic, self.netG)
+            n2 = set_wave(n2, self.gen_cf.nperiodic, self.netG)
             vutils.save_image(
                 n2.view(-1, 1, n2.shape[2], n2.shape[3]) * .5 + 0.5,
                 f'{self.glance_dir}/noise2_{self.epoch:03}.jpg',
                 normalize=False,
             )
-
-            glance = {"noise2":
-                      f'/static/{self.glance_dir}noise2_{self.epoch:03}.jpg'}
-            print(f'GLANCE 2 iteration: {self.it}; data: {json.dumps(glance)};')
 
             waves = n2[:, n2.shape[1] - self.gen_cf.nperiodic:].contiguous()
             waves = waves.view(-1, 1, n2.shape[2], n2.shape[3])
@@ -306,27 +235,20 @@ class Trainer:
                 f'{self.glance_dir}/waves_{self.epoch:03}.jpg',
                 normalize=False,
             )
-            glance = {"waves":
-                      f'/static/{self.glance_dir}waves_{self.epoch:03}.jpg'}
-            print(f'GLANCE 3 iteration: {self.it}; data: {json.dumps(glance)};')
 
     def _save_model(self):
         print('saving...')
         torch.save(self.netG.state_dict(),
                    f'checkpoints/{self.shu_name}/model.pt')
-        self.logger.dump()
 
     def _do_iteration(self, batch):
         content = self.cdataset.next().to(DEVICE)
         self.text, _ = batch
         self.text = self.text.to(DEVICE)
-        self.noise = setNoise(self.noise, audio=content, nGL=self.gen_cf.nGL)
+        self.noise = set_noise(self.noise, audio=content, nGL=self.gen_cf.nGL)
 
         self._take_discriminator_step()
         self._take_generator_step()
-
-        if self.it % 25 == 0:
-            self.logger.log()
 
         if self.it % 5 == 0:
             print(f'TRAIN iteration: {self.it}; epoch: {self.epoch}; '
@@ -351,22 +273,7 @@ class Trainer:
         to_print = json.dumps({'example': '/static/' + self.glance_dir + 'example.mp4'})
         print(f'GLANCE {n} iteration: {self.it}; data: {to_print};')
 
-    def _push_data(self):
-        version = str(db.instances.find_one({'name': 'ailive'})['version'])
-        print('pushing training data to ailive server')
-        shu.files.sync(version)
-        shu.files.checkpoints(version, exclude='"*"', include='"*/log"')
-        shu.files.data(version, exclude='"data/audio/*"')
-
-        ims = os.listdir('data/images/' + self.shu_name)
-        ims = ['/static/images/' + x for x in ims]
-
-        r = {'name': self.shu_name, 'examples': ims, 'info': {}, 'project': 'ailive'}
-        db.datasets.replace_one({'name': self.shu_name}, r, upsert=True)
-
-
     def train(self):
         for _ in range(self.train_cf.n_epochs):
             self._do_epoch()
         self._create_video()
-        self._push_data()

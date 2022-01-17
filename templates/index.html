@@ -3,52 +3,69 @@
     <script>
       function changeColor(color) {
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/change-color/' + color)
+        fetch('http://{{host}}:5000/change-color/' + color)
       }
 
       function modify(key) {
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/modify/' + key)
+        fetch('http://{{host}}:5000/modify/' + key)
       }
 
       function reset(key) {
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/reset/' + key)
+        fetch('http://{{host}}:5000/reset/' + key)
       }
 
       function pause(key) {
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/pause/' + key)
+        fetch('http://{{host}}:5000/pause/' + key)
       }
 
       function press(key) {
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/press/' + key)
+        fetch('http://{{host}}:5000/press/' + key)
       }
 
       function setNormalizer() {
         e = document.getElementById('myNorm')
         var value = (e.value / 100)
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/set-normalizer/' + value)
+        fetch('http://{{host}}:5000/set-normalizer/' + value)
         e = document.getElementById('normDisplay')
         e.innerHTML = 'Normalizer = ' + value
       }
 
       function setSensitivity() {
         e = document.getElementById('myRange')
-        var value = (e.value / 10)
+        var value = (e.value / 100)
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/set-sensitivity/' + value)
+        fetch('http://{{host}}:5000/set-sensitivity/' + value)
         e = document.getElementById('sDisplay')
-        e.innerHTML = 'Sensitivity = ' + value
+        e.innerHTML = 'sensitivity = ' + value
+      }
+
+      function smooth() {
+        e = document.getElementById('smoothRange')
+        console.log('sending request')
+        fetch('http://{{host}}:5000/smooth/' + e.value)
+        f = document.getElementById('smoothDisplay')
+        f.innerHTML = 'Smoothing Window = ' + e.value
+      }
+
+      function setPCALength() {
+        e = document.getElementById('pcaRange')
+        var value = e.value
+        console.log('sending request')
+        fetch('http://{{host}}:5000/set-pca-length/' + value)
+        e = document.getElementById('pca-control')
+        e.innerHTML = 'PCA length = ' + value
       }
 
       function filterImage() {
         e = document.getElementById('fRange')
         var value = (e.value / 10)
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/filter-image/' + value)
+        fetch('http://{{host}}:5000/filter-image/' + value)
         e = document.getElementById('fDisplay')
         e.innerHTML = 'Filter = ' + value
       }
@@ -57,7 +74,7 @@
         e = document.getElementById('stepsRange')
         var value = e.value
         console.log('sending request')
-        fetch('http://192.168.178.63:5000/set-transition-len/' + value)
+        fetch('http://{{host}}:5000/set-transition-len/' + value)
         e = document.getElementById('steps-control')
         e.innerHTML = 'Transition Length = ' + value
       }
@@ -65,7 +82,7 @@
       function randomWalk() {
         e = document.getElementById('walkRange')
         var value = (e.value / 100)
-        fetch('http://192.168.178.63:5000/set-walk-speed/' + value)
+        fetch('http://{{host}}:5000/set-walk-speed/' + value)
         e = document.getElementById('wDisplay')
         e.innerHTML = 'Walk speed = ' + value
       }
@@ -74,7 +91,7 @@
         e = document.getElementById('select-model')
         var value = (e.value)
         console.log(value)
-        fetch('http://192.168.178.63:5000/change-model/' + value)
+        fetch('http://{{host}}:5000/change-model/' + value)
 
       }
     </script>
@@ -146,24 +163,6 @@
           Keep blurriness/ sharpness
       </button>
     </div>
-<!--    <div style='display: flex;'>
-      <button
-        style='width: 33%; height: 25%; font-size: 30px;'
-        onclick="press('u')" >
-          U
-      </button>
-      <button
-        style='width: 33%; height: 25%; font-size: 30px;'
-        onclick="press('i')" >
-          I
-      </button>
-      <button
-        style='width: 33%; height: 25%; font-size: 30px;'
-        onclick="press('r')" >
-          Permute
-          Key
-      </button>
-    </div> -->
     <div>
       <div
         id='steps-control'
@@ -190,8 +189,8 @@
         onChange='setSensitivity()'
         style='width: 100%;'
         type="range"
-        min="0" max="30"
-        value="10"
+        min="0" max="600"
+        value="100"
         steps="1"
         class="slider"
         id="myRange" >
@@ -228,40 +227,23 @@
         class="slider"
         id="walkRange" >
     </div>
-<!--
-    <div style='display: flex; height: 140px; width: 25%;'>
+    <div>
       <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: red;' >
+        id='smoothDisplay'
+        style='text-align: center; width: 100%; padding-top: 20px; font-family: arial; font-size: 30px;' >
+            Smoothing window = 1
       </div>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: blue;' >
-      </div>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: green;' >
-      </div>
+      <input
+        onChange='smooth()'
+        style='width: 100%;'
+        type="range"
+        min=1 max="4"
+        value="1"
+        steps="1"
+        class="slider"
+        id="smoothRange" >
     </div>
-    <div style='display: flex; height: 140px; width: 25%;'>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: purple;' >
-      </div>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: yellow;' >
-      </div>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: orange;' >
-      </div>
-    </div>
-    <div style='display: flex; height: 140px; width: 25%;'>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: pink;' >
-      </div>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: turquoise;' >
-      </div>
-      <div
-        style='width: 33%; height: 100%; font-size: 30px; background-color: coral;' >
-      </div>
-    </div> -->
+  </div>
     <div>
       <div>SELECT MODEL</div>
       <select onchange="changeModel()" id="select-model">

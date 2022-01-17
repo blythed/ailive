@@ -43,17 +43,20 @@ class Component:
         self._reverse = value
         self.done = False
 
+    def _call_with_proportion(self, i, alpha):
+        raise NotImplementedError
+
     def __call__(self, i):
+        self.it = max(self.it, 0)
+
         if self.it != 0:
             i = self._call_with_proportion(i, self.it / self.n_steps)
         if not self.done and not self.reverse:
             self.it += 1
         elif not self.done and self.reverse:
             self.it -= 1
-        if self.it == self.n_steps or self.it <= 0:
+        if self.it >= self.n_steps or self.it <= 0:
             self.done = True
-
-        self.it = max(self.it, 0)
 
         return i
 

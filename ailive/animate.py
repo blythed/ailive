@@ -1,10 +1,7 @@
 import numpy as np
-import pickle
 import queue
 import sounddevice as sd
 from sklearn.decomposition import  IncrementalPCA
-import sys
-import time
 import tkinter as tk
 import warnings
 
@@ -15,7 +12,7 @@ import torch.nn as nn
 import torch.nn.functional as F
 
 from ailive.utils import psp3, L, AA
-from ailive.models import Generator, setNoise
+from ailive.models import Generator, set_noise
 from ailive import DEVICE
 
 
@@ -74,6 +71,7 @@ class Animator:
             self._init_pca()
 
         self.mapping = [0]
+        self.smoothing_window = 1
 
     @property
     def model_cf(self):
@@ -86,7 +84,7 @@ class Animator:
         value.Hpx = round(value.Wpx * self.aspect_ratio)
         self._model_cf = value
         model = self._init_model()
-        model.eval  ()
+        model.eval()
         self.model = self._load_model(self.model_cf.path, model)
 
     def _init_pca(self):
@@ -97,13 +95,24 @@ class Animator:
         if len(self.pcabuf) >= 80:
             self.pcabuf = self.pcabuf[-79:]
         self.pcabuf.append(x[:, 0])
-        if len(self.pcabuf) > 50:
+        if len(self.pcabuf) > 50: # ?
             self.ipca.partial_fit(np.array(self.pcabuf))
-            x = self.ipca.transform(x.T).T
+            # this variable doesnt actually do anything ...
             self.ipca.n_samples_seen_ = min(
                 self.ipca.n_samples_seen_,
                 self.audio_cf.pca_window,
             )
+            if self.audio_cf.n_smooth:
+                xsmooth = []
+                for i in range(x.shape[1]):
+                     j = x.shape[1] - i
+                     buf = self.pcabuf[-self.audio_cf.n_smooth - j:-j]
+                     buf = np.array(buf).T
+                     xsmooth.append(buf.mean(1))
+                xsmooth = np.array(xsmooth)
+                self.ipca.transform(xsmooth).T
+            else:
+                self.ipca.transform(x.T).T
         else:
             x = x[:self.model_cf.nGL]
         return x
@@ -142,7 +151,8 @@ class Animator:
         return  torch.arange(self.L).to(DEVICE).long()
 
     def infer_step(self, x, noise):
-        x = self.normalizer * x / (x.sum() + 0.0001)  + (1 - self.normalizer) * x
+        x = x[:, -self.smoothing_window:]
+        x = self.normalizer * x / (x.sum(0) + 0.0001) + (1 - self.normalizer) * x
         x = self.sensitivity * x
 
         if self.audio_cf.bPCA:
@@ -160,7 +170,7 @@ class Animator:
 
         x = x[:, self.order]
 
-        noise = setNoise(
+        noise = set_noise(
             noise,
             audio=x,
             nGL=self.model_cf.nGL,
@@ -169,8 +179,6 @@ class Animator:
             supressR=True,
         )
 
-        # noise[:, self.L:self.LE] += self.drift
-        # self.drift[noise[:, self.L:self.LE] ** 2 > 1] *= -1 # what is being tried here?
         noise[:, self.L:self.LE] = \
             nn.functional.hardtanh(noise[:, self.L:self.LE], -1, 1)
 
@@ -202,45 +210,6 @@ class Animator:
     def sensitivity(self, value):
         self._sensitivity = value
         print('sensitivity is ' + str(value))
-
-    def press(self, key, **kwargs):
-
-        if key == 'r':
-            self.order *= 0
-            self.order += torch.randperm(self.L).to(DEVICE)
-
-        if key == 't':
-            self.fDrift -= 0.01
-            if self.fDrift < 0:
-                self.fDrift *= 0
-            self.drift = (self.noise[:, self.L:self.LE] * .0).uniform_(-self.fDrift, self.fDrift)
-            self.noise[:, self.L:self.LE] = self.noise[:, self.L:self.LE].uniform_(-1, 1)
-
-        if key == 'z':
-            self.fDrift += 0.01
-            if self.fDrift > 0.2:
-                self.fDrift *= 0
-                self.fDrift += 0.2
-            self.drift = (self.noise[:, self.L:self.LE] * .0).uniform_(-self.fDrift, self.fDrift)
-            self.noise[:, self.L:self.LE] = self.noise[:, self.L:self.LE].uniform_(-1, 1)
-
-        if key == 'i':
-            self.audioA.nperseg += 100
-            self.audioA.nfft = self.audioA.nperseg
-            print("audio snapshots", self.audioA.getTFFT(
-                int(self.audio_cf.window * 44100 / (1000 * self.audio_cf.downsample)),
-            ))
-
-        if key == 'u':
-            self.audioA.nperseg -= 100
-            self.audioA.nperseg = max(self.audioA.nperseg, 500)
-            self.audioA.nfft = self.audioA.nperseg
-            print("audio snapshots", self.audioA.getTFFT(
-                int(self.audio_cf.window * 44100 / (1000 * self.audio_cf.downsample))),
-            )
-
-    def _press(self, event):
-        self.press(event.key)
 
     def get_noise(self):
         alpha = (self.n_steps % self.walk_steps) / self.walk_steps

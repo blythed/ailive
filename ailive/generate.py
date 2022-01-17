@@ -18,7 +18,8 @@ def generate(cf_model, cf_audio, checkpoint=None, a=None):
     if not hasattr(cf_model, 'path'):
         cf_model.path = 'checkpoints/' + checkpoint + '/model.pt'
     else:
-        checkpoint = re.search('checkpoints/([a-z_]+)/model.pt', cf_model.path).groups()[0]
+        checkpoint = \
+            re.search('checkpoints/([a-z_]+)/model.pt', cf_model.path).groups()[0]
 
     if a is None:
         a = Animator(cf_model, cf_audio)
