@@ -104,7 +104,7 @@ def shrink(magnitude, S):
 
 
 def shrinkMel(x, mel_filter=mel_filter):
-    mel = make_mel(x[1:].T, mel_filter)
+    mel = make_mel(x[1:].n_time_points, mel_filter)
     mel[np.isnan(mel)] = 0
     return mel
 

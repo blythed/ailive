@@ -5,18 +5,18 @@ def set_noise(noise,
               audio=None,
               nGL=60,
               supressR=False):
+    assert(nGL > 0)
 
     if not supressR:
         noise.uniform_(-1, 1)
-    assert(nGL > 0)
-    if nGL:
-        noise[:, :nGL] = noise[:, :nGL, :1, :1].repeat(
-            1, 1, noise.shape[2], noise.shape[3]
-        )
-        if audio is not None:
-            if len(audio.shape) == 2:
-                audio = audio.unsqueeze(-1).unsqueeze(-1)
-            noise[:, :nGL] = audio
+
+    noise[:, :nGL] = noise[:, :nGL, :1, :1].repeat(
+        1, 1, noise.shape[2], noise.shape[3]
+    )
+    if audio is not None:
+        if len(audio.shape) == 2:
+            audio = audio.unsqueeze(-1).unsqueeze(-1)
+        noise[:, :nGL] = audio
     return noise
 
 
@@ -56,7 +56,6 @@ class Generator(torch.nn.Module):
         self.nGL = nGL
 
         layers = []
-        of = nz
         for i in range(nDep):
             if i == nDep - 1:
                 nf = nc
@@ -64,15 +63,15 @@ class Generator(torch.nn.Module):
                 nf = ngf * 2 ** (nDep - 2 - i)
             if Ctype == 1:
                 layers += [torch.nn.Upsample(scale_factor=2, mode='nearest')]
-                layers += [torch.nn.Conv2d(of, nf, 4 + 1, 1, 2)]
+                layers += [torch.nn.Conv2d(nz, nf, 5, 1, 2)]
             else:
-                layers += [torch.nn.ConvTranspose2d(of, nf, 6, 2, 2)]
+                layers += [torch.nn.ConvTranspose2d(nz, nf, 6, 2, 2)]
             if i == nDep - 1:
                 layers += [torch.nn.Tanh()]
             else:
                 layers += [torch.nn.BatchNorm2d(nf)]
                 layers += [torch.nn.ReLU(True)]
-            of = nf
+            nz = nf
         self.main = torch.nn.Sequential(*layers)
 
     def forward(self, input):

@@ -110,9 +110,9 @@ class Animator:
                      buf = np.array(buf).T
                      xsmooth.append(buf.mean(1))
                 xsmooth = np.array(xsmooth)
-                self.ipca.transform(xsmooth).T
+                self.ipca.transform(xsmooth).n_time_points
             else:
-                self.ipca.transform(x.T).T
+                self.ipca.transform(x.n_time_points).n_time_points
         else:
             x = x[:self.model_cf.nGL]
         return x

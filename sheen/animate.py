@@ -6,14 +6,14 @@ import sounddevice
 import tkinter
 import torch
 
-from ailive.utils import psp3, AudioTransform
-from ailive.models import set_noise
-from ailive import DEVICE
+from sheen.utils import AudioTransform
+from sheen.models import set_noise
+from sheen import DEVICE
 
 
 class Animator:
     def __init__(self,
-                 model,
+                 netG,
                  projection,
                  audio_device: int,
                  channels: Tuple[int] = (1,),
@@ -25,13 +25,12 @@ class Animator:
                  n_steps: int = 0,
                  n_channels: int = 2,
                  sample_rate: Optional[int] = None,
-                 bPCA: bool = True,
                  downsample: int = 1,
                  window: int = 200,
                  n_smooth: int = 0,
                  pca_window: int = 2000):
 
-        self.model = model
+        self.netG = netG
         self.projection = projection
         self.audio_device = audio_device
         self.channels = channels
@@ -42,8 +41,7 @@ class Animator:
         self.walk_steps = walk_steps
         self.n_steps = n_steps
         self.n_channels = n_channels
-        self.sample_rate = sample_rate if sample_rate is None else self.get_sample_rate()
-        self.bPCA = bPCA
+        self.sample_rate = sample_rate if sample_rate is None else self._get_sample_rate()
         self.downsample = downsample
         self.window = window
         self.n_smooth = n_smooth
@@ -75,7 +73,7 @@ class Animator:
 
         self.order = self._init_order()
         self.L = L
-        self.LE = self.noise.shape[1] - self.model.nperiodic
+        self.LE = self.noise.shape[1] - self.netG.nperiodic
         self.drift = torch.zeros(*[
             self.noise.shape[0],
             self.LE - self.L,
@@ -110,16 +108,16 @@ class Animator:
                     buf = numpy.array(buf).T
                     xsmooth.append(buf.mean(1))
                 xsmooth = numpy.array(xsmooth)
-                self.projection.transform(xsmooth).T
+                self.projection.transform(xsmooth).n_time_points
             else:
-                self.projection.transform(x.T).T
+                self.projection.transform(x.n_time_points).n_time_points
         else:
-            x = x[:self.model.nGL]
+            x = x[:self.netG.nGL]
         return x
 
     def _init_noise(self):
         noise = torch.FloatTensor(
-            1, self.model.nz, self.model.Hpx, self.model.Wpx
+            1, self.netG.nz, self.netG.Hpx, self.netG.Wpx
         )
         noise.uniform_(-1, 1)
         noise = noise.to(DEVICE)
@@ -132,17 +130,15 @@ class Animator:
         x = x[:, -self.smoothing_window:]
         x = self.normalizer * x / (x.sum(0) + 0.0001) + (1 - self.normalizer) * x
         x = self.sensitivity * x
-
-        if self.bPCA:
-            x = self._update_projection(x)
+        x = self._update_projection(x)
 
         x = torch.FloatTensor(x).to(DEVICE).view(1, self.L, -1, 1)
 
-        if x.shape[2] != self.model.Hpx:
+        if x.shape[2] != self.netG.Hpx:
             x = x.permute(0, 1, 3, 2)
             x = torch.nn.functional.upsample(
                 x,
-                size=(self.model.Hpx, self.model.Wpx),
+                size=(self.netG.Hpx, self.netG.Wpx),
                 mode="bilinear"
             )
 
@@ -151,9 +147,7 @@ class Animator:
         noise = set_noise(
             noise,
             audio=x,
-            nGL=self.model.nGL,
-            nPeriodic=self.model.nperiodic,
-            nz=self.model.nz,
+            nGL=self.netG.nGL,
             supressR=True,
         )
 
@@ -161,7 +155,7 @@ class Animator:
             torch.nn.functional.hardtanh(noise[:, self.L:self.LE], -1, 1)
 
         with torch.no_grad():
-            img = self.model(noise)
+            img = self.netG(noise)
 
         img = img * 0.5 + 0.5
         img = img[0].permute(1, 2, 0)
@@ -182,8 +176,8 @@ class Animator:
         return noise
 
     def create_sample(self, x):
-        magnitude = self.audio_transform.sp3(x)
-        magnitude = psp3(magnitude)
+        magnitude = self.audio_transform.get_spectrogram(x)
+        magnitude = self.audio_transform.psp3(magnitude)
         magnitude = self.audio_transform.shrinkMel(magnitude)
         noise = self.get_noise()
         image = self.infer_step(magnitude, noise)
