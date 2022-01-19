@@ -55,6 +55,23 @@ def train(
     batch_size: int = 8,
     n_components: int = 20,
 ):
+    """
+    Train DC gan.
+
+    :param discriminator: discriminator network.
+    :param generator: generator network.
+    :param experiment: experiment directory.
+    :param texture_data: texture-dataset instance.
+    :param audio_data: audio-data instance.
+    :param manual_seed: manual seed for reproducibility
+    :param image_size: size of image-crops
+    :param lr: learning rate
+    :param beta1: beta1 for optimizer
+    :param beta2: beta2 for optimizer
+    :param n_epochs: number of epochs to train
+    :param batch_size: batch-size
+    :param n_components: number of projection components for dimensionality reduction
+    """
 
     random.seed(int(time.time() if manual_seed is None else manual_seed))
     torch.manual_seed(int(time.time()) if manual_seed is None else manual_seed)

@@ -3,14 +3,25 @@ from flask_cors import CORS
 import io
 from PIL import Image
 
+import sheen.animate
+from sheen.models import load_model
 from sheen.modifiers import *
 
 
 def create_app(
-    animator,
+    animator: sheen.animate.Animator,
     allowed_models,
+    padding: int = 0,
     host: str = 'localhost',
 ):
+    """
+    Create flask app streaming images output from the generator.
+
+    :param animator: animator object
+    :param allowed_models: models allowed to serve
+    :param padding: padding at the edges of the screen
+    :param host: host on which to serve
+    """
     app = Flask(__name__)
     CORS(app)
     modifiers = {
@@ -35,7 +46,7 @@ def create_app(
             shape = i.shape
 
             if is_changing and modifiers['black'].done:
-                animator.model_cf = cf.flask.model_cfs[latest_model]
+                animator.model = load_model(latest_model)
                 is_changing = False
                 latest_model = None
                 if not was_dark:
@@ -48,7 +59,7 @@ def create_app(
             i = (i > 0).astype(numpy.uint8) * i
 
             multiplier = round(
-                (1 - cf.flask.padding) * animator.screen_width / i.shape[1]
+                (1 - padding) * animator.screen_width / i.shape[1]
             )
 
             i = i.astype(numpy.uint8)
@@ -92,11 +103,6 @@ def create_app(
         modifiers[key].done = True
         return 'ok'
 
-    @app.route('/press/<string:key>')
-    def press(key):
-        animator.press(key)
-        return 'ok'
-
     @app.route('/set-sensitivity/<string:level>')
     def set_sensitivity(level):
         animator.sensitivity = float(level)
@@ -124,8 +130,8 @@ def create_app(
     def set_pca_length(length):
         length = int(length)
         print('pca length is: ' + str(length))
-        animator.audio_cf.pca_window = length
-        print(animator.audio_cf.pca_window)
+        animator.projection_window = length
+        print(animator.projection_window)
         return 'ok'
 
     @app.route('/smooth/<string:window>')

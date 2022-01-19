@@ -1,10 +1,7 @@
 import os
 import click
 import sounddevice
-import yaml
 
-from sheen.animate import Animator
-from sheen.app import create_app
 from sheen.stream import stream as _stream
 from aiconfig import build
 
@@ -20,22 +17,8 @@ def cli():
 @click.option('--server', '-s', default='server.yaml')
 @click.option('--host', '-h', default='localhost')
 def live(experiment, device, server, host):
-    netG = build(
-        f'models/{experiment}/config.yaml',
-        experiment=experiment,
-        target='netG',
-    )[0]
-    netG.load_state_dict(f'models/{experiment}/model.pt')
-    projection = build(
-        f'models/{experiment}/config.yaml',
-        experiment=experiment,
-        target='projection',
-    )[0]
-    with open(server) as f:
-        server = yaml.load(f)
-    animator = Animator(generator=netG, projection=projection, audio_device=device, **server)
     allowed_models = os.listdir('models')
-    create_app(animator, allowed_models, host)
+    build(server, experiment=experiment, device=device, host=host, allowed_models=allowed_models)
 
 
 @cli.command()

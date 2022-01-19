@@ -145,8 +145,8 @@ def set_walk_speed(speed):
 def set_pca_length(length):
     length = int(length)
     print('pca length is: ' + str(length))
-    animator.audio_cf.pca_window = length
-    print(animator.audio_cf.pca_window)
+    animator.audio_cf.projection_window = length
+    print(animator.audio_cf.projection_window)
     return 'ok'
 
 

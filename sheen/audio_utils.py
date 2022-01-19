@@ -8,15 +8,6 @@ FS = 44100
 
 
 def _get_filterbanks(nfilt=20, nfft=FFT_LENGTH, samplerate=FS, lowfreq=0, highfreq=None):
-    """Compute a Mel-filterbank. The filters are stored in the rows, the columns correspond
-    to fft bins. The filters are returned as an array of size nfilt * (nfft/2 + 1)
-    :param nfilt: the number of filters in the filterbank, default 20.
-    :param nfft: the FFT size. Default is 512.
-    :param samplerate: the samplerate of the signal we are working with. Affects mel spacing.
-    :param lowfreq: lowest band edge of mel filters, default 0 Hz
-    :param highfreq: highest band edge of mel filters, default samplerate/2
-    :returns: A numpy array of size nfilt * (nfft/2 + 1) containing filterbank. Each row holds 1 filter.
-    """
     highfreq = highfreq or samplerate / 2
     assert highfreq <= samplerate / 2, "highfreq is greater than samplerate/2"
 
@@ -37,9 +28,6 @@ def _get_filterbanks(nfilt=20, nfft=FFT_LENGTH, samplerate=FS, lowfreq=0, highfr
 def _create_mel_filter(
     fft_size, n_freq_components=64, start_freq=100 - 80, end_freq=1000 * 5, samplerate=FS,
 ):
-    """
-    Creates a filter to convolve with the spectrogram to get out mels
-    """
     mel_inversion_filter = _get_filterbanks(
         nfilt=n_freq_components,
         nfft=fft_size,
@@ -94,6 +82,14 @@ def _shrinkMel(x, mel_filter=MEL_FILTER):
 
 class AudioTransform:
     def __init__(self, nfft=FFT_LENGTH, nperseg=N_PER_SEGMENT, l=L, mel_filter=MEL_FILTER):
+        """
+        Transform to convert raw audio into mel-spectrogram samples.
+
+        :param nfft: size of fft
+        :param nperseg: number of samples per segment
+        :param l: number of frequency components
+        :param mel_filter: mel-filter to apply to the spectrogram to convert to "mels"
+        """
         self.mel_filter = mel_filter
         self.nfft = nfft
         self.nperseg = nperseg
