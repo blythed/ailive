@@ -15,7 +15,7 @@ import torchvision.utils as vutils
 
 from ailive import DEVICE
 from ailive.data import TextureDataset, LiveDataset
-from ailive.models import Generator, Discriminator, set_wave, set_noise
+from ailive.models import Generator, Discriminator, set_noise
 from ailive.config import Struct
 from ailive.generate import generate
 from ailive.config import cf

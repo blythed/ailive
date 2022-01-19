@@ -5,7 +5,7 @@ import pickle
 import torch
 
 
-class LiveDataset:
+class AudioDataset:
     def __init__(self, path: str, batch_size: int = 8, use_projection: bool = True):
         self.data = pickle.load(open(path, 'rb'))
         self.n_time_points = len(self.data)
@@ -29,18 +29,23 @@ class LiveDataset:
 
 class TextureDataset:
     def __init__(self, img_path: str, transform: callable):
+        if not img_path.endswith('/'):
+            img_path += '/'
         self.img_path = img_path
         self.transform = transform
         names = os.listdir(img_path)
         self.x_train = []
         for name in names[:]:
-           if not name[-3:].endswith('.jpg') and not name[-3:].endswith('png'):
+            if not name.endswith('.jpg') and not name.endswith('png'):
                continue
-           name = self.img_path + name
-           img = PIL.Image.open(name)
-           img = img.convert('RGB')
-           self.x_train += [img]
-           print(name, "img added", img.size, "total length", len(self.x_train))
+            name = self.img_path + name
+            img = PIL.Image.open(name)
+            img = img.convert('RGB')
+            self.x_train += [img]
+        print(name, "img added", img.size, "total length", len(self.x_train))
+        if len(self.x_train) < 2000:
+            c = int(2000 / len(self.x_train))
+            self.x_train *= c
 
     def __getitem__(self, index):
         img = self.x_train[index]

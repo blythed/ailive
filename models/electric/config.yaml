@@ -1,6 +1,8 @@
 parameters:
   - experiment
 
+root: train
+
 options:
   image_size: 160
 
@@ -8,12 +10,17 @@ builds:
   augment_transform:
     getter: sheen.transforms.get_augment_transform
     args:
-      image_size: $imageSize
+      image_size: $image_size
+
+  audio_data:
+    getter: sheen.data.AudioDataset
+    args:
+      path: data/audio/base/IPCAA2.dat
 
   texture_data:
     getter: sheen.data.TextureDataset
     args:
-      img_path: data/electric
+      img_path: data/images/electric
       transform: $augment_transform
 
   generator:
@@ -22,7 +29,7 @@ builds:
       network_depth: 5
       channel_number_parameter: 96
       in_channels: 50
-      convolution_type: 1
+      convolution_type: regular
       image_channels: 3
 
   discriminator:

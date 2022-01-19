@@ -76,7 +76,8 @@ def train(
         betas=(beta1, beta2),
     )
     texture_dataloader = torch.utils.data.DataLoader(
-        texture_data, batch_size=batch_size,
+        texture_data,
+        batch_size=batch_size,
         shuffle=True,
         num_workers=1
     )
@@ -84,9 +85,9 @@ def train(
     criterion = torch.nn.BCELoss()
     real_label = 1
     fake_label = 0
-    nz_other = image_size // 2 ** generator.nDep
-    noise = torch.FloatTensor(batch_size, generator.nz, nz_other, nz_other).to(DEVICE)
-    noise = set_noise(noise, nGL=generator.nGL)
+    size_parameter = image_size // 2 ** generator.network_depth
+    noise = torch.FloatTensor(batch_size, generator.in_channels, size_parameter, size_parameter).to(DEVICE)
+    noise = set_noise(noise, nGL=n_components)
 
     it = 0
     for epoch in range(n_epochs):
@@ -94,7 +95,7 @@ def train(
             content = audio_data.next().to(DEVICE)
             textures, _ = batch
             textures = textures.to(DEVICE)
-            noise = set_noise(noise, audio=content, nGL=generator.nGL)
+            noise = set_noise(noise, audio=content, nGL=n_components)
 
             # take discriminator step
             discriminator.zero_grad()
@@ -113,7 +114,7 @@ def train(
             # take generator step
             optimizerG.zero_grad()
             content = audio_data.next().to(DEVICE)
-            noise = set_noise(noise, audio=content, nGL=generator.nGL)
+            noise = set_noise(noise, audio=content, nGL=n_components)
             fake = generator(noise)
             output = discriminator(fake)
             errG = criterion(output, output.detach() * 0 + real_label)
@@ -123,8 +124,7 @@ def train(
             # bookkeeping
             it += 1
             if it % 5 == 0:
-                print(f'TRAIN iteration: {it}; epoch: {epoch}; '
-                      f'd_loss: {D_x}; g_loss: {D_G_z1};')
+                print(f'TRAIN iteration: {it}; epoch: {epoch}; d_loss: {D_x}; g_loss: {D_G_z1};')
 
         _make_glances(experiment, fake, noise, content, generator, n_components)
         torch.save(generator.state_dict(), f'models/{experiment}/model.pt')

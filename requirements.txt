@@ -5,4 +5,4 @@ numpy
 torchvision==0.4.0
 torch==1.2.0
 scipy
-ai-configurator
+aiconfig
