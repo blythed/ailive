@@ -1,0 +1,8 @@
+channels: [1]
+sensitivity: 1.0
+normalizer: 0.0
+sample_rate: null
+down_sample: 1
+window: 200
+pca_window: 2000
+noise_width: 15

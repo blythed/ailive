@@ -20,7 +20,7 @@ print(HOST)
 app = Flask(__name__)
 CORS(app)
 
-animator = Animator(cf.netG, cf.audio)
+animator = Animator(cf.generator, cf.audio)
 
 modifiers = {
     'white': White(100),

@@ -4,15 +4,18 @@ import torch
 def set_noise(noise,
               audio=None,
               nGL=60,
-              supressR=False):
+              supressR=False):  # suppress random?
     assert(nGL > 0)
 
     if not supressR:
         noise.uniform_(-1, 1)
 
+    # what the f. is this parameter nGL?
+    # why are we doing this?
     noise[:, :nGL] = noise[:, :nGL, :1, :1].repeat(
         1, 1, noise.shape[2], noise.shape[3]
     )
+    # wtf?
     if audio is not None:
         if len(audio.shape) == 2:
             audio = audio.unsqueeze(-1).unsqueeze(-1)
@@ -21,27 +24,38 @@ def set_noise(noise,
 
 
 class Discriminator(torch.nn.Module):
-    def __init__(self, ndf, nDep, nc=3, Ctype=1, bOut1=True):
+    # add sane defaults
+    def __init__(self, channel_number_parameter, network_depth, image_channels=3,
+                 convolution_type='regular', predict_binary=True):
         super().__init__()
+        self.channel_number_parameter = channel_number_parameter
+        self.network_depth = network_depth
+        self.image_channels = image_channels
+        self.convolution_type = convolution_type
+        self.predict_binary = predict_binary
+
         layers = []
-        for i in range(nDep):
-            if i == nDep - 1 and bOut1:
-                nf = 1
+        for i in range(network_depth):
+            if i == network_depth - 1 and predict_binary:
+                out_channels = 1
             else:
-                nf = ndf * 2 ** i
-            if Ctype == 1:
-                layers += [torch.nn.Conv2d(nc, nf, 5, 2, 2)]
+                out_channels = channel_number_parameter * 2 ** i
+            # is convolution type ever anything else?
+            if convolution_type == 'regular':
+                layers += [torch.nn.Conv2d(image_channels, out_channels, 5, 2, 2)]
+            elif convolution_type == 'transpose':
+                layers += [torch.nn.Conv2d(image_channels, out_channels, 4, 2, 1)]
             else:
-                layers += [torch.nn.Conv2d(nc, nf, 4, 2, 1)]
+                raise ValueError('convolution_type')
 
-            if i != 0 and i != nDep - 1:
-                layers += [torch.nn.BatchNorm2d(nf)]
+            if i != 0 and i != network_depth - 1:
+                layers += [torch.nn.BatchNorm2d(out_channels)]
 
-            if i < nDep - 1:
+            if i < network_depth - 1:
                 layers += [torch.nn.LeakyReLU(0.2, inplace=True)]
             else:
                 layers += [torch.nn.Sigmoid()]
-            nc = nf
+            image_channels = out_channels
         self.main = torch.nn.Sequential(*layers)
 
     def forward(self, input):
@@ -50,28 +64,37 @@ class Discriminator(torch.nn.Module):
 
 
 class Generator(torch.nn.Module):
-    def __init__(self, ngf, nDep, nz, nGL, Ctype=1, nc=3):
+    # add sane defaults
+    def __init__(self, channel_number_parameter, network_depth, in_channels,
+                 convolution_type='regular', image_channels=3):
 
         super().__init__()
-        self.nGL = nGL
+        self.channel_number_parameter = channel_number_parameter
+        self.network_depth = network_depth
+        self.in_channels = in_channels
+        self.convolution_type = convolution_type
+        self.image_channels = image_channels
 
         layers = []
-        for i in range(nDep):
-            if i == nDep - 1:
-                nf = nc
+        for i in range(network_depth):
+            if i == network_depth - 1:
+                out_channels = image_channels
             else:
-                nf = ngf * 2 ** (nDep - 2 - i)
-            if Ctype == 1:
+                out_channels = channel_number_parameter * 2 ** (network_depth - 2 - i)
+            if convolution_type == 'regular':
                 layers += [torch.nn.Upsample(scale_factor=2, mode='nearest')]
-                layers += [torch.nn.Conv2d(nz, nf, 5, 1, 2)]
+                layers += [torch.nn.Conv2d(in_channels, out_channels, 5, 1, 2)]
+            # do we ever use the transpose case?
+            elif convolution_type == 'transpose':
+                layers += [torch.nn.ConvTranspose2d(in_channels, out_channels, 6, 2, 2)]
             else:
-                layers += [torch.nn.ConvTranspose2d(nz, nf, 6, 2, 2)]
-            if i == nDep - 1:
+                raise ValueError('convolution_type')
+            if i == network_depth - 1:
                 layers += [torch.nn.Tanh()]
             else:
-                layers += [torch.nn.BatchNorm2d(nf)]
+                layers += [torch.nn.BatchNorm2d(out_channels)]
                 layers += [torch.nn.ReLU(True)]
-            nz = nf
+            in_channels = out_channels
         self.main = torch.nn.Sequential(*layers)
 
     def forward(self, input):

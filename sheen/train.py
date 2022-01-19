@@ -20,62 +20,63 @@ def _weights_init(m):
         m.bias.data.fill_(0)
 
 
-def _make_glances(experiment, epoch, fake, noise, content, netG):
+def _make_glances(experiment, fake, noise, content, generator, n_components):
     vutils.save_image(
         fake * 0.5 + 0.5,
-        f'models/{experiment}/glances/texture_{epoch:03}.jpg',
+        f'models/{experiment}/texture.jpg',
         normalize=False
     )
     n2 = noise[:4].repeat(1, 1, 3, 3)
-    n2 = set_noise(n2, audio=content[:4], nGL=netG.nGL)
-    netG.eval()
+    n2 = set_noise(n2, audio=content[:4], nGL=n_components)
+    generator.eval()
     with torch.no_grad():
-        fake2 = netG(n2)
-    netG.train()
+        fake2 = generator(n2)
+    generator.train()
 
     vutils.save_image(
         fake2 * 0.5 + 0.5,
-        f'models/{experiment}/glances/texture_2_{epoch:03}.jpg',
+        f'models/{experiment}/texture_2.jpg',
         normalize=False,
     )
 
 
 def train(
-    netD,
-    netG,
+    discriminator,
+    generator,
     experiment,
     texture_data,
     audio_data,
-    manualSeed: typing.Optional[int] = None,
-    imageSize: int = 160,
+    manual_seed: typing.Optional[int] = None,
+    image_size: int = 160,
     lr: float = 0.0002,
     beta1: float = 0.5,
     beta2: float = 0.999,
     n_epochs: int = 100,
-    batchSize: int = 8,
+    batch_size: int = 8,
+    n_components: int = 20,
 ):
 
-    random.seed(int(time.time() if manualSeed is None else manualSeed))
-    torch.manual_seed(int(time.time()) if manualSeed is None else manualSeed)
+    random.seed(int(time.time() if manual_seed is None else manual_seed))
+    torch.manual_seed(int(time.time()) if manual_seed is None else manual_seed)
 
     # torch.nn.Module.apply applies function to every recursive submodule
-    netD.apply(_weights_init)
-    netG.apply(_weights_init)
-    netD.to(DEVICE)
-    netG.to(DEVICE)
+    discriminator.apply(_weights_init)
+    generator.apply(_weights_init)
+    discriminator.to(DEVICE)
+    generator.to(DEVICE)
 
     optimizerD = optim.Adam(
-        netD.parameters(),
+        discriminator.parameters(),
         lr=lr,
         betas=(beta1, beta2),
     )
     optimizerG = optim.Adam(
-        netG.parameters(),
+        generator.parameters(),
         lr=lr,
         betas=(beta1, beta2),
     )
     texture_dataloader = torch.utils.data.DataLoader(
-        texture_data, batch_size=batchSize,
+        texture_data, batch_size=batch_size,
         shuffle=True,
         num_workers=1
     )
@@ -83,9 +84,9 @@ def train(
     criterion = torch.nn.BCELoss()
     real_label = 1
     fake_label = 0
-    nz_other = imageSize // 2 ** netG.nDep
-    noise = torch.FloatTensor(batchSize, netG.nz, nz_other, nz_other).to(DEVICE)
-    noise = set_noise(noise, nGL=netG.nGL)
+    nz_other = image_size // 2 ** generator.nDep
+    noise = torch.FloatTensor(batch_size, generator.nz, nz_other, nz_other).to(DEVICE)
+    noise = set_noise(noise, nGL=generator.nGL)
 
     it = 0
     for epoch in range(n_epochs):
@@ -93,17 +94,17 @@ def train(
             content = audio_data.next().to(DEVICE)
             textures, _ = batch
             textures = textures.to(DEVICE)
-            noise = set_noise(noise, audio=content, nGL=netG.nGL)
+            noise = set_noise(noise, audio=content, nGL=generator.nGL)
 
             # take discriminator step
-            netD.zero_grad()
-            output = netD(textures)
+            discriminator.zero_grad()
+            output = discriminator(textures)
             errD_real = criterion(output, output.detach() * 0 + real_label)
             errD_real.backward()
             D_x = output.mean().item()
             with torch.no_grad():
-                fake = netG(noise)
-            output = netD(fake.detach())
+                fake = generator(noise)
+            output = discriminator(fake.detach())
             errD_fake = criterion(output, output.detach() * 0 + fake_label)
             errD_fake.backward()
             D_G_z1 = output.mean().item()
@@ -112,17 +113,18 @@ def train(
             # take generator step
             optimizerG.zero_grad()
             content = audio_data.next().to(DEVICE)
-            noise = set_noise(noise, audio=content, nGL=netG.nGL)
-            fake = netG(noise)
-            output = netD(fake)
+            noise = set_noise(noise, audio=content, nGL=generator.nGL)
+            fake = generator(noise)
+            output = discriminator(fake)
             errG = criterion(output, output.detach() * 0 + real_label)
             errG.backward()
             optimizerG.step()
 
+            # bookkeeping
             it += 1
             if it % 5 == 0:
                 print(f'TRAIN iteration: {it}; epoch: {epoch}; '
                       f'd_loss: {D_x}; g_loss: {D_G_z1};')
 
-        _make_glances(experiment, epoch, fake, noise, content, netG)
-        torch.save(netG.state_dict(), f'models/{experiment}/model.pt')
+        _make_glances(experiment, fake, noise, content, generator, n_components)
+        torch.save(generator.state_dict(), f'models/{experiment}/model.pt')

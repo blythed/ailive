@@ -6,52 +6,52 @@ import sounddevice
 import tkinter
 import torch
 
-from sheen.utils import AudioTransform
+from sheen.audio_utils import AudioTransform
 from sheen.models import set_noise
 from sheen import DEVICE
 
 
 class Animator:
     def __init__(self,
-                 netG,
+                 generator,
                  projection,
                  audio_device: int,
                  channels: Tuple[int] = (1,),
-                 L: int = 60,
                  sensitivity: float = 1.0,
                  normalizer: float = 0.0,
-                 random_walk: bool = False,
-                 walk_steps: int = 100,
-                 n_steps: int = 0,
-                 n_channels: int = 2,
                  sample_rate: Optional[int] = None,
-                 downsample: int = 1,
+                 down_sample: int = 1,
                  window: int = 200,
                  n_smooth: int = 0,
-                 pca_window: int = 2000):
+                 pca_window: int = 2000,
+                 noise_width: int = 15):
 
-        self.netG = netG
+        self.generator = generator
         self.projection = projection
         self.audio_device = audio_device
         self.channels = channels
-        self.L = L
         self.sensitivity = sensitivity
         self.normalizer = normalizer
-        self.random_walk = random_walk
-        self.walk_steps = walk_steps
-        self.n_steps = n_steps
-        self.n_channels = n_channels
         self.sample_rate = sample_rate if sample_rate is None else self._get_sample_rate()
-        self.downsample = downsample
+        self.downsample = down_sample
         self.window = window
         self.n_smooth = n_smooth
         self.pca_window = pca_window
+        self.noise_width = noise_width
 
+        # these variables need to initialized but not set in __init__
         self.projection_buffer = []
+        self.random_walk = False
+        self.walk_steps = 100
+        self.n_steps = 0
+        self.audio_transform = AudioTransform()
+        self.the_queue = queue.Queue()
+        self.mapping = [0]  # not sure what this is.
+        self.smoothing_window = 1
 
-        length = int(self.window * self.sample_rate / (1000 * self.downsample))
-        self.plotdata = numpy.zeros((length, n_channels))
-
+        # maybe this has to do with how the FFTs are created ?
+        length = int(self.window * self.sample_rate / (1000 * self.downsample))  # what's this 1000?
+        self.data_buffer = numpy.zeros((length, len(channels)))
         self.stream = sounddevice.InputStream(
             device=self.audio_device,
             channels=max(self.channels),
@@ -65,98 +65,73 @@ class Animator:
         self.aspect_ratio = self.screen_height / self.screen_width
         root.withdraw()
 
+        self.noise_height = round(self.noise_width * self.aspect_ratio)
         self.noise = self._init_noise()
         self.new_noise = self._init_noise()
-        self.random_walk = random_walk
-        self.walk_steps = walk_steps
-        self.n_steps = n_steps
-
-        self.order = self._init_order()
-        self.L = L
-        self.LE = self.noise.shape[1] - self.netG.nperiodic
-        self.drift = torch.zeros(*[
-            self.noise.shape[0],
-            self.LE - self.L,
-            *self.noise.shape[2:]
-        ]).to(DEVICE)
-
-        self.fDrift = 0.0
-        self.audio_transform = AudioTransform()
-        self.the_queue = queue.Queue()
-        self.mapping = [0]  # not sure what this is.
-        self.smoothing_window = 1
 
     def _get_sample_rate(self):
         device_info = sounddevice.query_devices(self.audio_device, 'input')
         return device_info['default_samplerate']
 
     def _update_projection(self, x):
-        if len(self.projection_buffer) >= 80:
-            self.projection_buffer = self.projection_buffer[-79:]
         self.projection_buffer.append(x[:, 0])
-        if len(self.projection_buffer) > 50:
+        if len(self.projection_buffer) > 80:  # why 80 - what is this?
+            self.projection_buffer = self.projection_buffer[-80:]  # ??
+        if len(self.projection_buffer) > 50:   # why 50 - what is this?
             self.projection.partial_fit(numpy.array(self.projection_buffer))
             self.projection.n_samples_seen_ = min(
                 self.projection.n_samples_seen_,
                 self.pca_window,
             )
-            if self.n_smooth:
-                xsmooth = []
-                for i in range(x.shape[1]):
-                    j = x.shape[1] - i
-                    buf = self.projection_buffer[-self.audio_cf.n_smooth - j:-j]
-                    buf = numpy.array(buf).T
-                    xsmooth.append(buf.mean(1))
-                xsmooth = numpy.array(xsmooth)
-                self.projection.transform(xsmooth).n_time_points
-            else:
-                self.projection.transform(x.n_time_points).n_time_points
+            return self.projection.transform(x.T).T
         else:
-            x = x[:self.netG.nGL]
+            x = x[:self.projection.n_components]
         return x
 
     def _init_noise(self):
         noise = torch.FloatTensor(
-            1, self.netG.nz, self.netG.Hpx, self.netG.Wpx
+            1, self.generator.in_channels, self.noise_height, self.noise_width
         )
         noise.uniform_(-1, 1)
         noise = noise.to(DEVICE)
         return noise
 
-    def _init_order(self):
-        return torch.arange(self.L).to(DEVICE).long()
-
     def infer_step(self, x, noise):
-        x = x[:, -self.smoothing_window:]
+        # doesn't this fuck everything up ??????????????????
+        x = x[:, -self.smoothing_window:]  ## ?????????????????
         x = self.normalizer * x / (x.sum(0) + 0.0001) + (1 - self.normalizer) * x
         x = self.sensitivity * x
         x = self._update_projection(x)
 
-        x = torch.FloatTensor(x).to(DEVICE).view(1, self.L, -1, 1)
+        # why the -1 here? I think this expands the dimensions to fit the network
+        x = torch.FloatTensor(x).to(DEVICE).view(1, self.projection.n_components, -1, 1)
 
-        if x.shape[2] != self.netG.Hpx:
+        if x.shape[2] != self.noise_height:  # why would this ever not be the case?
             x = x.permute(0, 1, 3, 2)
             x = torch.nn.functional.upsample(
                 x,
-                size=(self.netG.Hpx, self.netG.Wpx),
+                size=(self.noise_height, self.generator.noise_width),
                 mode="bilinear"
             )
 
-        x = x[:, self.order]
-
+        # this function is confusing - needs to be split up -
+        # 1. creating noise
+        # 2. interpolating new-noise with old
+        # 3. adding audio to noise
         noise = set_noise(
             noise,
             audio=x,
-            nGL=self.netG.nGL,
+            nGL=self.projection.n_components,
             supressR=True,
         )
 
-        noise[:, self.L:self.LE] = \
-            torch.nn.functional.hardtanh(noise[:, self.L:self.LE], -1, 1)
+        noise[:, self.projection.n_components:] = \
+            torch.nn.functional.hardtanh(noise[:, self.projection.n_components:], -1, 1)
 
         with torch.no_grad():
-            img = self.netG(noise)
+            img = self.generator(noise)
 
+        # why these transformations?
         img = img * 0.5 + 0.5
         img = img[0].permute(1, 2, 0)
 
@@ -165,7 +140,8 @@ class Animator:
     def _audio_callback(self, indata, *args):
         self.the_queue.put(indata[::self.downsample, self.mapping])
 
-    def get_noise(self):
+    def _get_noise(self):
+        # get how far we are along in the interpolation of one noise to another
         alpha = (self.n_steps % self.walk_steps) / self.walk_steps
         noise = alpha * self.new_noise + (1 - alpha) * self.noise
         if self.random_walk:
@@ -175,26 +151,25 @@ class Animator:
                 self.new_noise = self._init_noise()
         return noise
 
-    def create_sample(self, x):
-        magnitude = self.audio_transform.get_spectrogram(x)
-        magnitude = self.audio_transform.psp3(magnitude)
-        magnitude = self.audio_transform.shrinkMel(magnitude)
-        noise = self.get_noise()
+    def _create_sample(self, x):
+        magnitude = self.audio_transform(x)
+        noise = self._get_noise()
         image = self.infer_step(magnitude, noise)
         return image
 
-    def update(self):
+    def _update(self):
         while True:
             try:
                 data = self.the_queue.get_nowait()
             except queue.Empty:
                 break
             shift = len(data)
-            self.plotdata = numpy.roll(self.plotdata, -shift, axis=0)
-            self.plotdata[-shift:, :] = data
-        return self.create_sample(self.plotdata)
+            # what does this roll do?
+            self.data_buffer = numpy.roll(self.data_buffer, -shift, axis=0)
+            self.data_buffer[-shift:, :] = data
+        return self._create_sample(self.data_buffer)
 
     def __iter__(self):
         with self.stream:
             while True:
-                yield self.update()
+                yield self._update()

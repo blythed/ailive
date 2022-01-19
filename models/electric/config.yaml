@@ -2,13 +2,13 @@ parameters:
   - experiment
 
 options:
-  imageSize: 160
+  image_size: 160
 
 builds:
   augment_transform:
     getter: sheen.transforms.get_augment_transform
     args:
-      imageSize: $imageSize
+      image_size: $imageSize
 
   texture_data:
     getter: sheen.data.TextureDataset
@@ -16,29 +16,27 @@ builds:
       img_path: data/electric
       transform: $augment_transform
 
-  netG:
+  generator:
     getter: sheen.models.Generator
     args:
-      Wpx: 15
-      nDep: 5
-      nGL: 20
-      ngf: 96
-      nz: 50
-      Ctype: 1
-      nc: 3
+      network_depth: 5
+      channel_number_parameter: 96
+      in_channels: 50
+      convolution_type: 1
+      image_channels: 3
 
-  netD:
+  discriminator:
     getter: sheen.models.Discriminator
     args:
-      ndf: 96
-      nDep: 5
+      channel_number_parameter: 96
+      network_depth: 5
 
   train:
     getter: sheen.train.train
     args:
-      netG: $netG
-      netD: $netD
+      generator: $generator
+      discriminator: $discriminator
       experiment: $experiment
       texture_data: $texture_data
       audio_data: $audio_data
-      imageSize: $imageSize
+      image_size: $image_size
