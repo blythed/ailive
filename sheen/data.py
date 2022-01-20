@@ -7,6 +7,13 @@ import torch
 
 class AudioDataset:
     def __init__(self, path: str, batch_size: int = 8, use_projection: bool = True):
+        """
+        Audio data loaded from file. Data must be tuple in pickle format (int, numpy.ndarray)
+
+        :param path: path to data
+        :param batch_size: batch-size
+        :param use_projection: use projection on top of raw mel spectrograms or not
+        """
         self.data = pickle.load(open(path, 'rb'))
         self.n_time_points = len(self.data)
         self.batch_size = batch_size
@@ -31,6 +38,12 @@ class TextureDataset:
     def __init__(self, img_path: str, transform: callable):
         if not img_path.endswith('/'):
             img_path += '/'
+        """
+        Torch data-set for loading patches of images.
+
+        :param img_path: directory of images to train on
+        :param transform: torchvision transform
+        """
         self.img_path = img_path
         self.transform = transform
         names = os.listdir(img_path)

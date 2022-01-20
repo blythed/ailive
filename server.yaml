@@ -1,8 +1,40 @@
-channels: [1]
-sensitivity: 1.0
-normalizer: 0.0
-sample_rate: null
-down_sample: 1
-window: 200
-pca_window: 2000
-noise_width: 15
+parameters:
+  - experiment
+  - device
+  - host
+  - allowed_models
+
+root: server
+
+builds:
+  generator:
+    getter: sheen.models.load_model
+    args:
+      experiment: $experiment
+
+  projection:
+    getter: sheen.projections.IncrementalPCA
+    args:
+      n_components: 20
+      projection_window: 2000
+
+  animator:
+    getter: sheen.animate.Animator
+    args:
+      generator: $generator
+      projection: $projection
+      channels: [1]
+      sensitivity: 1.0
+      normalizer: 0.0
+      sample_rate: null
+      down_sample: 1
+      window: 200
+      pca_window: 2000
+      noise_width: 15
+
+  server:
+    getter: sheen.app.create_app
+    args:
+      animator: $animator
+      allowed_models: $allowed_models
+      host: $host

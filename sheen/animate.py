@@ -6,6 +6,7 @@ import sounddevice
 import tkinter
 import torch
 
+import sheen.projections
 from sheen.audio_utils import AudioTransform
 from sheen.models import set_noise
 from sheen import DEVICE
@@ -13,8 +14,8 @@ from sheen import DEVICE
 
 class Animator:
     def __init__(self,
-                 generator,
-                 projection,
+                 generator: torch.nn.Module,
+                 projection: sheen.projections.Projection,
                  audio_device: int,
                  channels: Tuple[int] = (1,),
                  sensitivity: float = 1.0,
@@ -22,9 +23,21 @@ class Animator:
                  sample_rate: Optional[int] = None,
                  down_sample: int = 1,
                  window: int = 200,
-                 n_smooth: int = 0,
-                 pca_window: int = 2000,
                  noise_width: int = 15):
+        """
+        Animator class to generate image samples based on live streaming audio.
+
+        :param generator: generating neural network
+        :param projection: projection mapping raw audio mel spectrograms to component space
+        :param audio_device: number of audio device (do `sheen list_devices` to find out)
+        :param channels: list of channels (no idea why)
+        :param sensitivity: sensitivity to audio
+        :param normalizer: degree to which the audio is normalized
+        :param sample_rate: sample rate of audio (auto-determined if not provided)
+        :param down_sample: down-sampling factor
+        :param window: number of samples to use in calculating latest spectrogram
+        :param noise_width: size of noise tensor which is input into generator
+        """
 
         self.generator = generator
         self.projection = projection
@@ -35,8 +48,6 @@ class Animator:
         self.sample_rate = sample_rate if sample_rate is None else self._get_sample_rate()
         self.downsample = down_sample
         self.window = window
-        self.n_smooth = n_smooth
-        self.pca_window = pca_window
         self.noise_width = noise_width
 
         # these variables need to initialized but not set in __init__
@@ -78,11 +89,7 @@ class Animator:
         if len(self.projection_buffer) > 80:  # why 80 - what is this?
             self.projection_buffer = self.projection_buffer[-80:]  # ??
         if len(self.projection_buffer) > 50:   # why 50 - what is this?
-            self.projection.partial_fit(numpy.array(self.projection_buffer))
-            self.projection.n_samples_seen_ = min(
-                self.projection.n_samples_seen_,
-                self.pca_window,
-            )
+            self.projection.update(numpy.array(self.projection_buffer))
             return self.projection.transform(x.T).T
         else:
             x = x[:self.projection.n_components]

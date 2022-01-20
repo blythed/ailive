@@ -15,6 +15,16 @@ def stream(
     samplerate: typing.Optional[int] = None,
     downsample: int = 10,
 ):
+    """
+    Show live output from device.
+
+    :param interval: interval on which to refresh
+    :param device: device to listen to
+    :param window: window to show
+    :param channels: channels to display
+    :param samplerate: sample-rate
+    :param downsample: downsample ratio
+    """
     mapping = [c - 1 for c in channels]  # Channel numbers start with 1
     q = queue.Queue()
 

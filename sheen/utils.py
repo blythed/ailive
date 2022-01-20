@@ -1,4 +1,9 @@
 def map_legacy_parameters(cf):
+    """
+    Map legacy parameters to new parameters.
+
+    :param cf: old-config
+    """
     new_cf = {'discriminator': {}, 'generator': {}}
 
     if 'nz' in cf['generator']:

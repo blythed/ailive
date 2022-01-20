@@ -4,6 +4,12 @@ from scipy.ndimage import gaussian_filter
 
 class Modifier:
     def __init__(self, mods: dict):
+        """
+        Object containing a store of modifier components (Component) which change the appearance
+        of an image.
+
+        :param mods: dictionary of modifiers
+        """
         self.mods = mods
         self.active = []
 
@@ -19,6 +25,11 @@ class Modifier:
 
 class Component:
     def __init__(self, n_steps):
+        """
+        Component class calling transitions to an image over a period of steps.
+
+        :param n_steps: the number of steps the transitions should run.
+        """
         self._n_steps = n_steps
         self.it = 0
         self.done = True
@@ -62,24 +73,28 @@ class Component:
 
 
 class Greyscale(Component):
+    """ Convert to grey and back. """
     def _call_with_proportion(self, i, alpha):
         grey = numpy.tile(numpy.mean(i, 2)[:, :, None], (1, 1, 3))
         return alpha * grey + (1 - alpha) * i
 
 
 class White(Component):
+    """ Convert to white image and back. """
     def _call_with_proportion(self, i, alpha):
         white = 255 * numpy.ones(i.shape)
         return alpha * white + (1 - alpha) * i
 
 
 class Black(Component):
+    """ Convert to black image and back. """
     def _call_with_proportion(self, i, alpha):
         black = numpy.zeros(i.shape)
         return alpha * black + (1 - alpha) * i
 
 
 class Filter(Component):
+    """ Make blurry/ sharp. """
     def _call_with_proportion(self, i, alpha):
         if alpha:
             for j in range(3):

@@ -1,10 +1,32 @@
 import torch
+from aiconfig import build
+
+
+def load_model(experiment):
+    """
+    Load model into memory, including weights.
+
+    :param experiment: directory inside "./models"
+    """
+    model = build(f'models/{experiment}/explicit.json', target='generator')[0]
+    model.load_state_dict(torch.load(f'models/{experiment}/model.pt'))
+    return model
 
 
 def set_noise(noise,
               audio=None,
               nGL=60,
               supressR=False):  # suppress random?
+    """
+    Create noise tensor with the purpose of inputting to the generator neural net.
+    Certain dimensions of this tensor are simply the audio repeated.
+    TODO consider renaming/ redesigning.
+
+    :param noise: noise tensor (to be filled with new-noise)
+    :param audio: audio signal
+    :param nGL: number of components to fill with audio
+    :param supressR:
+    """
     assert(nGL > 0)
 
     if not supressR:
@@ -19,7 +41,7 @@ def set_noise(noise,
     if audio is not None:
         if len(audio.shape) == 2:
             audio = audio.unsqueeze(-1).unsqueeze(-1)
-        noise[:, :nGL] = audio
+        noise[:, :nGL] = audio  # there is an ellypsis here
     return noise
 
 
@@ -27,6 +49,15 @@ class Discriminator(torch.nn.Module):
     # add sane defaults
     def __init__(self, channel_number_parameter, network_depth, image_channels=3,
                  convolution_type='regular', predict_binary=True):
+        """
+        Discriminator neural network.
+
+        :param channel_number_parameter: parameter governing the number of channels at a given depth
+        :param network_depth: number of layers in the network
+        :param image_channels: number of channels in the input image
+        :param convolution_type: type of convolution {'regular', 'transpose'}
+        :param predict_binary: toggle to True to predict binary output (TODO required?)
+        """
         super().__init__()
         self.channel_number_parameter = channel_number_parameter
         self.network_depth = network_depth
@@ -64,9 +95,18 @@ class Discriminator(torch.nn.Module):
 
 
 class Generator(torch.nn.Module):
-    # add sane defaults
+    # TODO add sane defaults
     def __init__(self, channel_number_parameter, network_depth, in_channels,
                  convolution_type='regular', image_channels=3):
+        """
+        Generator neural network.
+
+        :param channel_number_parameter: parameter governing the number of channels at a given depth
+        :param network_depth: number of layers in the network
+        :param in_channels: number of channels in noise tensor to input
+        :param convolution_type: type of convolution {'regular', 'transpose'}
+        :param image_channels: number of channels in the generated image
+        """
 
         super().__init__()
         self.channel_number_parameter = channel_number_parameter
