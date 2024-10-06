@@ -2,22 +2,17 @@ from flask import Flask, render_template, Response
 from flask_cors import CORS
 import io
 from PIL import Image
-import sys
 
 from ailive.config import cf
 from ailive.animate import Animator
 from ailive.modifiers import *
 
-if len(sys.argv) == 1 or sys.argv[1] == 'remote':
-    HOST = '192.168.1.102'
-elif sys.argv[1] == 'local':
-    HOST = 'localhost'
-else:
-    HOST = sys.argv[1]
+HOST = '127.0.0.1'
 
 print(HOST)
 
 app = Flask(__name__)
+
 CORS(app)
 
 animator = Animator(cf.model, cf.audio)
@@ -117,7 +112,7 @@ def press(key):
 
 @app.route('/set-sensitivity/<string:level>')
 def set_sensitivity(level):
-    animator.sensitivity = float(level)
+    animator.sensitivity = float(level) * cf.audio.level
     return 'ok'
 
 
@@ -178,4 +173,4 @@ def change_model(name):
 
 
 if __name__ == '__main__':
-    app.run(host='0.0.0.0', debug=True, use_reloader=False)
+    app.run(host='0.0.0.0', port=5001, debug=True, use_reloader=False)

@@ -1,12 +1,6 @@
-sensitivity:
-  # multiplier
-  level: 1.0
-  # whether to normalize
-  normalize: 0.5
-
 audio:
   # something technical (leave alone)
-  device: 7
+  device: 4
   # ???
   channels: [1]
   # subsampling???
@@ -19,12 +13,16 @@ audio:
   pca_window: 2000
   # pca smoothing
   n_smooth: 0
+  # base sensitivity
+  level: 1.0
+
 flask:
   # black padding as a proportion of screen size
   padding: 0
   # path of model folder to load
   path:
   - electric
+  - electric_repro
   - northernlights
   - matrix
   - fire

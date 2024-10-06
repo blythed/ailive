@@ -27,7 +27,7 @@ class Animator:
         root.withdraw()
         self.aspect_ratio = self.screen_height / self.screen_width
 
-        self._sensitivity = 1
+        self._sensitivity = getattr(audio_cf, 'level', 1.0)
         self._normalizer = 0
         self.audio_cf = audio_cf
 
@@ -51,21 +51,21 @@ class Animator:
         self.audioA = AA()
         self.q = queue.Queue()
 
-        try:
-            device_info = sd.query_devices(self.audio_cf.device, 'input')
-            self.samplerate = device_info['default_samplerate']
-            length = int(self.audio_cf.window * self.samplerate /
-                         (1000 * self.audio_cf.downsample))
-            self.plotdata = np.zeros((length, len(audio_cf.channels)))
+        # try:
+        device_info = sd.query_devices(self.audio_cf.device, 'input')
+        self.samplerate = device_info['default_samplerate']
+        length = int(self.audio_cf.window * self.samplerate /
+                        (1000 * self.audio_cf.downsample))
+        self.plotdata = np.zeros((length, len(audio_cf.channels)))
 
-            self.stream = sd.InputStream(
-                device=self.audio_cf.device,
-                channels=max(self.audio_cf.channels),
-                samplerate=self.samplerate,
-                callback=self._audio_callback,
-            )
-        except:
-            self.samplerate = 44100
+        self.stream = sd.InputStream(
+            device=self.audio_cf.device,
+            channels=max(self.audio_cf.channels),
+            samplerate=self.samplerate,
+            callback=self._audio_callback,
+        )
+        # except:
+        #     self.samplerate = 44100
 
         if self.audio_cf.bPCA:
             self._init_pca()

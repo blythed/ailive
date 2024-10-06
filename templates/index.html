@@ -3,34 +3,34 @@
     <script>
       function changeColor(color) {
         console.log('sending request')
-        fetch('http://{{host}}:5000/change-color/' + color)
+        fetch('http://{{host}}:5001/change-color/' + color)
       }
 
       function modify(key) {
         console.log('sending request')
-        fetch('http://{{host}}:5000/modify/' + key)
+        fetch('http://{{host}}:5001/modify/' + key)
       }
 
       function reset(key) {
         console.log('sending request')
-        fetch('http://{{host}}:5000/reset/' + key)
+        fetch('http://{{host}}:5001/reset/' + key)
       }
 
       function pause(key) {
         console.log('sending request')
-        fetch('http://{{host}}:5000/pause/' + key)
+        fetch('http://{{host}}:5001/pause/' + key)
       }
 
       function press(key) {
         console.log('sending request')
-        fetch('http://{{host}}:5000/press/' + key)
+        fetch('http://{{host}}:5001/press/' + key)
       }
 
       function setNormalizer() {
         e = document.getElementById('myNorm')
         var value = (e.value / 100)
         console.log('sending request')
-        fetch('http://{{host}}:5000/set-normalizer/' + value)
+        fetch('http://{{host}}:5001/set-normalizer/' + value)
         e = document.getElementById('normDisplay')
         e.innerHTML = 'Normalizer = ' + value
       }
@@ -39,7 +39,7 @@
         e = document.getElementById('myRange')
         var value = (e.value / 100)
         console.log('sending request')
-        fetch('http://{{host}}:5000/set-sensitivity/' + value)
+        fetch('http://{{host}}:5001/set-sensitivity/' + value)
         e = document.getElementById('sDisplay')
         e.innerHTML = 'sensitivity = ' + value
       }
@@ -47,7 +47,7 @@
       function smooth() {
         e = document.getElementById('smoothRange')
         console.log('sending request')
-        fetch('http://{{host}}:5000/smooth/' + e.value)
+        fetch('http://{{host}}:5001/smooth/' + e.value)
         f = document.getElementById('smoothDisplay')
         f.innerHTML = 'Smoothing Window = ' + e.value
       }
@@ -56,7 +56,7 @@
         e = document.getElementById('pcaRange')
         var value = e.value
         console.log('sending request')
-        fetch('http://{{host}}:5000/set-pca-length/' + value)
+        fetch('http://{{host}}:5001/set-pca-length/' + value)
         e = document.getElementById('pca-control')
         e.innerHTML = 'PCA length = ' + value
       }
@@ -65,7 +65,7 @@
         e = document.getElementById('fRange')
         var value = (e.value / 10)
         console.log('sending request')
-        fetch('http://{{host}}:5000/filter-image/' + value)
+        fetch('http://{{host}}:5001/filter-image/' + value)
         e = document.getElementById('fDisplay')
         e.innerHTML = 'Filter = ' + value
       }
@@ -74,7 +74,7 @@
         e = document.getElementById('stepsRange')
         var value = e.value
         console.log('sending request')
-        fetch('http://{{host}}:5000/set-transition-len/' + value)
+        fetch('http://{{host}}:5001/set-transition-len/' + value)
         e = document.getElementById('steps-control')
         e.innerHTML = 'Transition Length = ' + value
       }
@@ -82,7 +82,7 @@
       function randomWalk() {
         e = document.getElementById('walkRange')
         var value = (e.value / 100)
-        fetch('http://{{host}}:5000/set-walk-speed/' + value)
+        fetch('http://{{host}}:5001/set-walk-speed/' + value)
         e = document.getElementById('wDisplay')
         e.innerHTML = 'Walk speed = ' + value
       }
@@ -91,7 +91,7 @@
         e = document.getElementById('select-model')
         var value = (e.value)
         console.log(value)
-        fetch('http://{{host}}:5000/change-model/' + value)
+        fetch('http://{{host}}:5001/change-model/' + value)
 
       }
     </script>

@@ -29,6 +29,7 @@ flask_cf = Struct(**cf['flask'], indent=2)
 
 if isinstance(flask_cf.path, str):
     flask_cf.path = [flask_cf.path]
+
 flask_cf.model_cfs = {}
 for x in flask_cf.path:
     with open(f'checkpoints/{x}/config.yaml') as f:

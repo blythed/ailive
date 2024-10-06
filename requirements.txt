@@ -1,5 +1,11 @@
+scikit-learn
+pyyaml
+flask_cors
+flask
 matplotlib
 numpy
 torchvision
 torch
+tk
+sounddevice
 scipy

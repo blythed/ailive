@@ -1,4 +1,4 @@
-# AI Live - back end of the "Sheen"
+# AI Live
 
 ## Usage
 

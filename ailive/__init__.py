@@ -1,3 +1,5 @@
-from torch.cuda import is_available
+from torch.backends.mps import is_available
 
-DEVICE = 'cuda' if is_available() else 'cpu'
+DEVICE = 'mps' if is_available() else 'cpu'
+
+print('DEVICE:', DEVICE)
